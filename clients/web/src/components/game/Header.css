@@ -1,0 +1,8 @@
+.game-header {
+  position:  fixed;
+  width: 100vh;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+}

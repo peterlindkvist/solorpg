@@ -1,0 +1,19 @@
+.game {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  max-width: 100%;
+  height: 90%;
+  background-repeat: no-repeat;
+}
+
+.game-text {
+  font-size: 1.5em;
+  line-height: 2;
+  text-align: center;
+  padding: 100px;
+}
+
+.game-text img {
+  max-width: 400px;
+}

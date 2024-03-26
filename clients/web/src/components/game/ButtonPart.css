@@ -1,0 +1,10 @@
+
+.game-button-container {
+  display: flex;
+  flex-direction: column;
+  width: 100% ;
+}
+
+.game-button {
+  margin: 10px;
+}
