@@ -2,7 +2,7 @@ import markdownit, { Token } from "markdown-it";
 import anchor from "markdown-it-anchor";
 import json5 from "json5";
 import balanced from "balanced-match";
-import { Chapter, Image, Part, Story } from "../types";
+import { Chapter, Code, Image, Part, State, Story } from "../types";
 
 // default mode
 const md = markdownit({
@@ -189,6 +189,20 @@ export function renderMarkdown(markdown: string): string {
   return md.render(markdown);
 }
 
+export function markdownToStory(markdown: string, storyName: string): Story {
+  const chapters = parseMarkdown(markdown);
+  const state: State = chapters[0].state ?? {};
+  const story: Story = {
+    id: storyName ?? "",
+    title: state.title ?? chapters[0].heading ?? "",
+    markdown: markdown,
+    chapters,
+    images: findImages(chapters),
+    state,
+  };
+  return story;
+}
+
 export function storyToMarkdown(story: Story): string {
   return story.chapters.map((chapter) => chapterToMarkdown(chapter)).join("\n");
 }
@@ -210,9 +224,53 @@ function chapterToMarkdown(chapter: Chapter): string {
           case "image":
             return `![${part.text}](${part.url})\n\n`;
           case "choice":
-            return `[${part.text}](#${part.target})\n`;
+            return `- [${part.text}](#${part.target})\n`;
+          case "action":
+            return "`" + JSON.stringify(part.event) + "`\n\n";
+          case "code":
+            return "`" + codeToMarkdown(part) + "`\n\n";
+          case "navigation":
+            return `#${part.target}\n`;
         }
       })
       .join("");
+  return ret;
+}
+
+function codeToMarkdown(code: Code): string {
+  let ret = "";
+  ret = ret + `${code.condition} ?`;
+  if (code.true) {
+    ret = `${ret} ${codePartToMarkdown(code.true)}`;
+  }
+  if (code.false) {
+    ret = `${ret} : ${codePartToMarkdown(code.false)}`;
+  }
+  return `${ret}`;
+}
+
+function codePartToMarkdown(event: Part): string {
+  switch (event.type) {
+    case "paragraph":
+      return `${event.text}`;
+    case "navigation":
+      return `#${event.target}`;
+    case "action":
+      return JSON.stringify(event.event);
+    default:
+      return "";
+  }
+}
+
+export function storyToMermaid(story: Story): string {
+  let ret = "flowchart TD\n";
+  for (const chapter of story.chapters) {
+    ret = `${ret}    ${chapter.id}["${chapter.heading}"]\n`;
+    for (const part of chapter.parts) {
+      if (part.type === "choice") {
+        ret = `${ret}    ${chapter.id} -->|${part.text}| ${part.target}\n`;
+      }
+    }
+  }
   return ret;
 }

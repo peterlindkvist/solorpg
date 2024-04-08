@@ -70,6 +70,23 @@ async function speechToText(audio) {
   };
 }
 
+async function textToText(text, context) {
+  const query = {
+    model: "gpt-3.5-turbo",
+    messages: [
+      { role: "system", content: context },
+      { role: "user", content: text },
+    ],
+  };
+  console.log("query", query);
+  const response = await openai.chat.completions.create(query);
+  console.log("response", JSON.stringify(response, undefined, 2));
+
+  return {
+    text: response.choices[0].message.content,
+  };
+}
+
 async function saveImage(imageURL, fileName) {
   const response = await fetch(imageURL);
   const buffer = Buffer.from(await response.arrayBuffer());
@@ -89,5 +106,6 @@ module.exports = {
   generateImages,
   textToImage,
   textToSpeech,
+  textToText,
   speechToText,
 };

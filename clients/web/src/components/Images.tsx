@@ -5,10 +5,10 @@ import { useState } from "react";
 
 type Props = {
   story: Story;
-  updateMarkdown: (text: string) => void;
+  updateStory: (story: Story) => void;
 };
 
-export function Images({ story, updateMarkdown }: Props) {
+export function Images({ story, updateStory }: Props) {
   const [isLoading, setIsLoading] = useState(false);
 
   function fetchImage(image: Image) {
@@ -21,14 +21,8 @@ export function Images({ story, updateMarkdown }: Props) {
     };
     api.textToImage(options).then(({ url }) => {
       console.log(image);
-      const newImageMarkdown = `![${image.text}](${url})`;
-      if (image.markdown) {
-        const markdown = story.markdown.replace(
-          image.markdown,
-          newImageMarkdown
-        );
-        updateMarkdown(markdown);
-      }
+      image.url = url;
+      updateStory(story);
       setIsLoading(false);
     });
   }

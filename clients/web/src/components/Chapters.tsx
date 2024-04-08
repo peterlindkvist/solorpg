@@ -5,10 +5,10 @@ import * as api from "../utils/api";
 
 type Props = {
   story?: Story;
-  updateMarkdown: (text: string) => void;
+  updateStory: (story: Story) => void;
 };
 
-export function Chapters({ story, updateMarkdown }: Props) {
+export function Chapters({ story, updateStory }: Props) {
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchSound = useCallback(
@@ -23,36 +23,12 @@ export function Chapters({ story, updateMarkdown }: Props) {
         narrator: story?.state?.narrator ?? "onyx",
       };
       api.textToSpeech(options).then((result) => {
-        const chapterState = chapter.state;
-        if (chapterState) {
-          chapterState.voiceUrl = result.url;
-          const regExpStr = `${chapter.heading}${"\n```"}[\\s\\S]*?${"```"}`;
-          const regExp = new RegExp(regExpStr, "g");
-
-          const newStateJSON =
-            chapter.heading +
-            "\n```\n" +
-            JSON.stringify(chapterState, null, 2) +
-            "\n```";
-          const markdown = story.markdown.replace(regExp, newStateJSON);
-
-          updateMarkdown(markdown);
-        } else {
-          const newState = { voiceUrl: result.url };
-          const markdown = story.markdown.replace(
-            `## ${chapter.heading}`,
-            `## ${chapter.heading}` +
-              "\n```\n" +
-              JSON.stringify(newState, null, 2) +
-              "\n```"
-          );
-          updateMarkdown(markdown);
-        }
-
+        chapter.state = { ...chapter.state, voiceUrl: result.url };
+        updateStory(story);
         setIsLoading(false);
       });
     },
-    [story, updateMarkdown]
+    [story, updateStory]
   );
 
   if (!story?.chapters) {

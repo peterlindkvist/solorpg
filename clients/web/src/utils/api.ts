@@ -30,6 +30,15 @@ export async function fileUpload(
   return result;
 }
 
+export function textToText(query: {
+  text: string;
+  context?: string;
+}): Promise<{ text: string }> {
+  const queryString = new URLSearchParams(query).toString();
+
+  return fetch(`${apiPath}/text?${queryString}`).then((res) => res.json());
+}
+
 export function textToImage(query: {
   storyId: string;
   description: string;

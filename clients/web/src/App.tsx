@@ -2,8 +2,12 @@ import { useCallback, useState } from "react";
 import "./App.css";
 import { Markdown } from "./components/Markdown";
 import * as api from "./utils/api";
-import { Page, State, Story } from "./types";
-import { findImages, parseMarkdown } from "./utils/markdownUtils";
+import { Page, Story } from "./types";
+import {
+  markdownToStory,
+  storyToMarkdown,
+  storyToMermaid,
+} from "./utils/markdownUtils";
 import { Chapters } from "./components/Chapters";
 import { Game } from "./components/Game";
 import { Images } from "./components/Images";
@@ -14,53 +18,36 @@ function App() {
   const [story, setStory] = useState<Story>();
   const [page, setPage] = useState<Page>("edit");
 
-  const updateMarkdown = useCallback(
-    async (markdown: string) => {
-      const chapters = parseMarkdown(markdown);
-      const state: State = chapters[0].state ?? {};
-      const story: Story = {
-        id: storyName ?? "",
-        title: state.title ?? chapters[0].heading ?? "",
-        markdown: markdown,
-        chapters,
-        images: findImages(chapters),
-        state,
-      };
-
-      setStory(story);
-    },
-    [storyName]
-  );
-
-  const saveAndUpdateMarkdown = useCallback(
-    async (markdown: string) => {
+  const saveAndUpdateStory = useCallback(
+    async (story: Story) => {
       if (storyName === undefined || bookName === undefined) {
         return;
       }
+      const markdown = storyToMarkdown(story);
+      console.log("story", story);
       await api.saveStory(storyName, bookName, markdown);
-      await updateMarkdown(markdown);
+      setStory(story);
     },
-    [storyName, bookName, updateMarkdown]
+    [storyName, bookName]
   );
 
-  // const updateStory = useCallback(
-  //   async (story: Story) => {
-  //     const formattedStory = storyToMarkdown(story);
-  //     updateMarkdown(formattedStory);
-  //   },
-  //   [updateMarkdown]
-  // );
-
-  const fetchStory = useCallback(
-    (storyName: string, bookName: string) => {
-      setStoryName(storyName);
-      setBookName(bookName);
-      api.getStory(storyName, bookName).then((text) => {
-        updateMarkdown(text);
-      });
+  const saveAndUpdateMarkdown = useCallback(
+    async (markdown: string, storyName: string) => {
+      const story = markdownToStory(markdown, storyName ?? "");
+      console.log("mermaid", storyToMermaid(story));
+      saveAndUpdateStory(story);
     },
-    [updateMarkdown]
+    [storyName, saveAndUpdateStory]
   );
+
+  const fetchStory = useCallback((storyName: string, bookName: string) => {
+    setStoryName(storyName);
+    setBookName(bookName);
+    api.getStory(storyName, bookName).then((markdown) => {
+      const story = markdownToStory(markdown, storyName ?? "");
+      setStory(story);
+    });
+  }, []);
 
   if (!storyName) {
     fetchStory("test", "grotta");
@@ -89,10 +76,10 @@ function App() {
           <Markdown story={story} updateMarkdown={saveAndUpdateMarkdown} />
         )}
         {page === "chapters" && (
-          <Chapters story={story} updateMarkdown={saveAndUpdateMarkdown} />
+          <Chapters story={story} updateStory={saveAndUpdateStory} />
         )}
         {page === "images" && story && (
-          <Images story={story} updateMarkdown={saveAndUpdateMarkdown} />
+          <Images story={story} updateStory={saveAndUpdateStory} />
         )}
       </div>
       <div className="game-container">

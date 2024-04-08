@@ -8,6 +8,7 @@ const {
   textToImage,
   textToSpeech,
   speechToText,
+  textToText,
 } = require("./server/services/assetsService");
 
 const {
@@ -89,21 +90,28 @@ async function solorpg(req, res) {
     return;
   }
 
-  if (req.path.startsWith("/api/text") && req.method === "POST") {
-    const bb = busboy({ headers: req.headers });
-    await new Promise((resolve, reject) => {
-      bb.once("close", resolve)
-        .once("error", reject)
-        .on("file", async (_name, fileStream, _info) => {
-          fileStream.resume();
-          const buffer = await streamToBuffer(fileStream);
-          const transcript = await speechToText(buffer);
-          res.send({ text: transcript.text });
-        })
-        .end(req.rawBody);
-    });
+  if (req.path.startsWith("/api/text")) {
+    if (req.method === "POST") {
+      const bb = busboy({ headers: req.headers });
+      await new Promise((resolve, reject) => {
+        bb.once("close", resolve)
+          .once("error", reject)
+          .on("file", async (_name, fileStream, _info) => {
+            fileStream.resume();
+            const buffer = await streamToBuffer(fileStream);
+            const transcript = await speechToText(buffer);
+            res.send({ text: transcript.text });
+          })
+          .end(req.rawBody);
+      });
 
-    return;
+      return;
+    }
+    if (req.method === "GET") {
+      const { text, context } = req.query;
+      const newText = await textToText(text, context);
+      res.send(newText);
+    }
   }
 
   const file = getStaticFile(`${__dirname}/clients/web/dist`, req.path, true);
