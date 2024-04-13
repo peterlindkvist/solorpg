@@ -43,7 +43,6 @@ export function textToImage(query: {
   storyId: string;
   description: string;
   context?: string;
-  renderType?: string;
 }): Promise<Image> {
   const queryString = new URLSearchParams(query).toString();
 

@@ -45,7 +45,8 @@ export type Navigation = {
 
 export type Action = {
   type: "action";
-  event: Record<string, string>;
+  event: Record<string, string | number>;
+  text?: string;
 };
 
 export type Part = Choice | Image | Paragraph | Code | Navigation | Action;
@@ -56,12 +57,14 @@ export type State = {
   author?: string;
   error?: string;
   theme?: Theme;
-  images?: {
-    context: "dark cave";
-    renderType: "photorealistic";
-  };
-  narrator?: Narrator;
   voiceUrl?: string;
+  assistant: Assistant;
+};
+
+export type Assistant = {
+  imageContext: string;
+  textContext: string;
+  narrator: Narrator;
 };
 
 export type Theme = {

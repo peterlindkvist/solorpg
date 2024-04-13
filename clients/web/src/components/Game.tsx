@@ -78,11 +78,13 @@ export function Game({ story, exit }: Props) {
 
   const setNewChapter = useCallback(
     (chapter: Chapter) => {
-      const { parts, newState } = parseChapter(chapter, state ?? {});
-      setRenderParts(parts);
-      setState(newState);
-      setChapter(chapter);
-      console.log("setNewChapter", chapter, state);
+      if (state) {
+        const { parts, newState } = parseChapter(chapter, state);
+        setRenderParts(parts);
+        setState(newState);
+        setChapter(chapter);
+        console.log("setNewChapter", chapter, state);
+      }
     },
     [state]
   );

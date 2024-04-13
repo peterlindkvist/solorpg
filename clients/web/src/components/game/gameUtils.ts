@@ -1,4 +1,4 @@
-import { flatten, unflatten } from "flat";
+import { flatten, unflatten } from "safe-flat";
 import { Parser } from "expr-eval";
 import { Action, Chapter, Part, State } from "../../types";
 
@@ -11,7 +11,7 @@ export function parseChapter(
   parts: Part[];
   newState: State;
 } {
-  let newState: FlattenState = flatten(state);
+  let newState: FlattenState = flatten(state) as FlattenState;
   const renderParts = [];
   for (const part of chapter.parts) {
     if (["image", "paragraph", "choice"].includes(part.type)) {
@@ -31,36 +31,48 @@ export function parseChapter(
         renderParts.push(codePart);
         break;
       } else if (codePart.type === "action") {
-        newState = evaluateAction(codePart, newState);
+        const { state, renderPart } = evaluateAction(codePart, newState);
+        newState = state;
+        renderParts.push(renderPart);
       }
     } else if (part.type === "action") {
-      newState = evaluateAction(part, newState);
+      const { state, renderPart } = evaluateAction(part, newState);
+      newState = state;
+      renderParts.push(renderPart);
     }
   }
 
-  return { parts: renderParts, newState: unflatten(newState) };
+  return { parts: renderParts, newState: unflatten(newState) as State };
 }
 
-function evaluateAction(
+export function evaluateAction(
   action: Action,
   flattenState: FlattenState
-): FlattenState {
+): { renderPart: Action; state: FlattenState } {
   const withMissingKeys = {
     ...Object.fromEntries(Object.keys(action.event).map((key) => [key, 0])),
     ...flattenState,
   };
+  const texts: string[] = [];
 
   const newValues = Object.fromEntries(
     Object.entries(action.event).map(([key, value]) => {
-      const newValue = evaluateValue(key, value, withMissingKeys) ?? 0;
+      const oldValue = flattenState[key] ?? 0;
+      const newValue = evaluateValue(key, value, withMissingKeys) ?? oldValue;
+      texts.push(`${key}: ${oldValue} -> ${newValue}`);
       return [key, newValue];
     })
   );
-  return { ...flattenState, ...newValues };
+  return {
+    renderPart: { ...action, text: texts.join(", ") },
+    state: { ...flattenState, ...newValues },
+  };
 }
 
 export function updateState(action: Action, state: State): State {
-  const flattenState: Record<string, string | number> = flatten(state);
+  const flattenState: Record<string, string | number> = flatten(
+    state
+  ) as FlattenState;
   const withMissingKeys = {
     ...Object.fromEntries(Object.keys(action.event).map((key) => [key, 0])),
     ...flattenState,
@@ -73,7 +85,7 @@ export function updateState(action: Action, state: State): State {
       return [key, newValue];
     })
   );
-  return unflatten({ ...flattenState, ...newValues });
+  return unflatten({ ...flattenState, ...newValues }) as State;
 }
 
 function evaluateValue(

@@ -11,7 +11,7 @@ async function generateImages(context, renderType, descriptions) {
 }
 
 async function textToImage(description, context, renderType) {
-  const prompt = `An image of a ${description} in a ${context} setting. ${renderType}`;
+  const prompt = `${context} ${description}`;
   const query = {
     model: "dall-e-3",
     prompt,

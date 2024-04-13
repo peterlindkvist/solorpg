@@ -41,8 +41,8 @@ async function solorpg(req, res) {
 
   if (req.path.startsWith("/api/images")) {
     if (req.method === "GET") {
-      const { description, context, renderType, storyId } = req.query;
-      const ret = await textToImage(description, context, renderType);
+      const { description, context, storyId } = req.query;
+      const ret = await textToImage(description, context);
       const image = await uploadUrlToStorage(
         ret.url,
         `${storyId}/${ret.fileName}`
