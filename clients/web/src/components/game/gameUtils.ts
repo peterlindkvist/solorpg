@@ -1,6 +1,7 @@
 import { flatten, unflatten } from "safe-flat";
 import { Parser } from "expr-eval";
 import { Action, Chapter, Part, State } from "../../types";
+import { DiceRoll } from "@dice-roller/rpg-dice-roller";
 
 type FlattenState = Record<string, string | number>;
 
@@ -53,13 +54,19 @@ export function evaluateAction(
     ...Object.fromEntries(Object.keys(action.event).map((key) => [key, 0])),
     ...flattenState,
   };
+  withMissingKeys;
   const texts: string[] = [];
 
   const newValues = Object.fromEntries(
     Object.entries(action.event).map(([key, value]) => {
       const oldValue = flattenState[key] ?? 0;
-      const newValue = evaluateValue(key, value, withMissingKeys) ?? oldValue;
-      texts.push(`${key}: ${oldValue} -> ${newValue}`);
+      const { value: newValue, rolls } = evaluateActionValue(
+        key,
+        value,
+        withMissingKeys
+      );
+      const arrow = rolls ? `-${rolls}->` : "->";
+      texts.push(`${key}: ${oldValue} ${arrow} ${newValue}`);
       return [key, newValue];
     })
   );
@@ -67,6 +74,69 @@ export function evaluateAction(
     renderPart: { ...action, text: texts.join(", ") },
     state: { ...flattenState, ...newValues },
   };
+}
+
+function evaluateActionValue(
+  key: string,
+  value: string | number,
+  state: FlattenState
+): { value: string | number; rolls?: string } {
+  const oldValue = state[key] ?? 0;
+  const withoutPrefix = replacePrefix(key, value);
+  const withState = replaceWithState(withoutPrefix, state);
+  const noSpace = withState.replaceAll(" ", "");
+  const withRolledDices = rollDices(noSpace);
+  // console.log("evaluateActionValue", {
+  //   oldValue,
+  //   value,
+  //   withoutPrefix,
+  //   withRolledDices,
+  //   withState,
+  //   noSpace,
+  // });
+  const newValue = evaluateValue(withRolledDices.value) ?? oldValue;
+  return {
+    value: newValue,
+    ...(withRolledDices ? { rolls: withRolledDices.rolls } : {}),
+  };
+}
+
+function replacePrefix(key: string, value: string | number): string {
+  if (typeof value === "number") {
+    return value.toString();
+  } else {
+    if (value.startsWith("+=")) {
+      return `${key} + ${value.slice(2)}`;
+    }
+    if (value.startsWith("-=")) {
+      return `${key} - (${value.slice(2)})`;
+    }
+    return value;
+  }
+}
+
+export function replaceWithState(text: string, state: FlattenState): string {
+  let ret = text;
+  for (const [key, value] of Object.entries(state)) {
+    ret = ret.replaceAll(key, value.toString());
+  }
+  return ret;
+}
+
+function rollDices(value: string): { value: string; rolls?: string } {
+  const diceMatches = Array.from(value.matchAll(/\[(.*)\]/g));
+  if (diceMatches.length === 0) {
+    return { value };
+  }
+  const ret = { value: "", rolls: "" };
+  for (const match of diceMatches) {
+    const roll = new DiceRoll(match[1]);
+    return {
+      value: ret.value + roll.total.toString(),
+      rolls: ret.rolls + roll.rolls.toString(),
+    };
+  }
+  return ret;
 }
 
 export function updateState(action: Action, state: State): State {
@@ -78,32 +148,17 @@ export function updateState(action: Action, state: State): State {
     ...flattenState,
   };
 
-  console.log("updateState", action, flattenState);
+  console.log("updateState", action, flattenState, withMissingKeys);
   const newValues = Object.fromEntries(
     Object.entries(action.event).map(([key, value]) => {
-      const newValue = evaluateValue(key, value, withMissingKeys);
+      const newValue = evaluateValue(value);
       return [key, newValue];
     })
   );
   return unflatten({ ...flattenState, ...newValues }) as State;
 }
 
-function evaluateValue(
-  key: string,
-  value: string | number,
-  flattenState: Record<string, string | number>
-): number | undefined {
-  // const existingNumber = typeof existingValue === "number" ? existingValue : Number.parseFloat(existingValue);
-  if (typeof value === "number") {
-    return value;
-  }
-  if (value.startsWith("+=")) {
-    value = `${key} + ${value.slice(2)}`;
-  }
-  if (value.startsWith("-=")) {
-    value = `${key} - ${value.slice(2)}`;
-  }
-
-  const parser = Parser.parse(value);
-  return parser.evaluate(flattenState);
+function evaluateValue(value: string | number): number | undefined {
+  const parser = Parser.parse(value.toString());
+  return parser.evaluate();
 }

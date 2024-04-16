@@ -1,8 +1,18 @@
 import { describe, expect, test } from "@jest/globals";
 import { Action } from "../../types";
-import { evaluateAction } from "./gameUtils";
+import { evaluateAction, replaceWithState } from "./gameUtils";
 
 describe("gameUtils", () => {
+  describe("replaceWithState", () => {
+    test("replaceWithState", () => {
+      expect(replaceWithState("text", {})).toBe("text");
+      expect(replaceWithState("strength d6", { strength: 4, agility: 3 })).toBe(
+        "4 d6"
+      );
+      expect(replaceWithState("a + a + b", { a: 2, b: 3 })).toBe("2 + 2 + 3");
+    });
+  });
+
   describe("evaluateAction", () => {
     test("simple set action", () => {
       const action: Action = {
@@ -56,7 +66,7 @@ describe("gameUtils", () => {
       );
     });
 
-    test("evaluate states", () => {
+    test("evaluate calculation states", () => {
       const action: Action = {
         type: "action",
         event: {
@@ -74,6 +84,19 @@ describe("gameUtils", () => {
       expect(renderPart.text).toEqual(
         "cupper: 4 -> 444, gold: 3 -> 0, silver: 14 -> 0"
       );
+    });
+
+    test("evaluate with dices", () => {
+      const action: Action = {
+        type: "action",
+        event: {
+          rolld6: "[d1]",
+        },
+      };
+      const { state, renderPart } = evaluateAction(action, {});
+
+      expect(state.rolld6).toBe(1);
+      expect(renderPart.text).toEqual("rolld6: 0 -[1]-> 1");
     });
   });
 });

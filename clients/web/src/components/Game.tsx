@@ -16,8 +16,8 @@ type Props = {
 
 let recordInterval: NodeJS.Timeout | undefined;
 
-export function Game({ story, exit }: Props) {
-  const [previousStory, setPreviousStory] = useState<Story>();
+export function Game(props: Props) {
+  const [story, setStory] = useState<Story>();
   const [chapter, setChapter] = useState<Chapter>();
   const [renderParts, setRenderParts] = useState<Array<Part>>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -78,12 +78,12 @@ export function Game({ story, exit }: Props) {
 
   const setNewChapter = useCallback(
     (chapter: Chapter) => {
+      console.log("setNewChapter", chapter, state);
       if (state) {
         const { parts, newState } = parseChapter(chapter, state);
         setRenderParts(parts);
         setState(newState);
         setChapter(chapter);
-        console.log("setNewChapter", chapter, state);
       }
     },
     [state]
@@ -99,17 +99,21 @@ export function Game({ story, exit }: Props) {
     [story, setNewChapter]
   );
 
-  if (previousStory !== story) {
-    setPreviousStory(story);
-    const chapter = story?.chapters[0];
-    if (chapter) {
-      setNewChapter(chapter);
+  if (story !== props.story) {
+    setStory(props.story);
+    setState(props.story?.state);
+  }
+
+  if (!chapter && story) {
+    const newChapter = props.story?.chapters[0];
+    if (newChapter) {
+      setNewChapter(newChapter);
     }
   }
 
-  if (!story || !chapter) {
-    return null;
-  }
+  // if (!story || !chapter) {
+  //   return null;
+  // }
 
   return (
     <div
@@ -117,7 +121,7 @@ export function Game({ story, exit }: Props) {
       style={isRecording ? { backgroundColor: "#ff000060" } : {}}
     >
       <Header
-        exit={exit}
+        exit={props.exit}
         setSound={setSound}
         toggleVoice={toggleVoice}
         sound={sound}
@@ -139,7 +143,7 @@ export function Game({ story, exit }: Props) {
           }
         })}
       </div>
-      {sound && chapter.state?.voiceUrl && (
+      {sound && chapter?.state?.voiceUrl && (
         <audio
           src={chapter.state?.voiceUrl}
           controls

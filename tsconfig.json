@@ -26,7 +26,7 @@
   "include": [
     "**/*.ts",
     "**/*.js"
-  ],
+, "clients/web/jest.config.cjs"  ],
   "exclude": [
     "node_modules",
   ],
