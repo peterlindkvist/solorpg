@@ -14,6 +14,7 @@ export function parseChapter(
 } {
   let newState: FlattenState = flatten(state) as FlattenState;
   const renderParts = [];
+  console.log("parseChapter", chapter, newState);
   for (const part of chapter.parts) {
     if (["image", "paragraph", "choice"].includes(part.type)) {
       renderParts.push(part);
@@ -38,6 +39,7 @@ export function parseChapter(
       }
     } else if (part.type === "action") {
       const { state, renderPart } = evaluateAction(part, newState);
+      console.log("action", state, renderPart);
       newState = state;
       renderParts.push(renderPart);
     }

@@ -78,9 +78,9 @@ export function Game(props: Props) {
 
   const setNewChapter = useCallback(
     (chapter: Chapter) => {
-      console.log("setNewChapter", chapter, state);
       if (state) {
         const { parts, newState } = parseChapter(chapter, state);
+        console.log("newState", newState);
         setRenderParts(parts);
         setState(newState);
         setChapter(chapter);
@@ -140,6 +140,9 @@ export function Game(props: Props) {
           }
           if (part.type === "paragraph") {
             return <p key={i}>{part.text}</p>;
+          }
+          if (part.type === "action") {
+            return <code key={i}>{part.text}</code>;
           }
         })}
       </div>

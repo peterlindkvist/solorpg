@@ -50,7 +50,13 @@ function App() {
   }, []);
 
   if (!storyName) {
-    fetchStory("test", "grotta");
+    const url = new URL(window.location.href);
+    const [_, storyName, bookName] = url.pathname.split("/");
+    if (!storyName || !bookName) {
+      window.location.href = "/test/grotta";
+    } else {
+      fetchStory(storyName, bookName);
+    }
   }
 
   return (

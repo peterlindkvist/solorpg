@@ -125,9 +125,12 @@ async function uploadFileToStorage(
 async function fetchTextFromStorage(fileName) {
   console.log("fetchFileFromStorage", fileName);
   const bucket = storage.bucket(bucketName);
-  const file = bucket.file(fileName);
-  const content = await file.download();
-  return content.toString();
+  const file = await bucket.file(fileName);
+  const exists = await file.exists();
+  if (exists[0]) {
+    const content = await file.download();
+    return content.toString();
+  }
 }
 
 function streamToBuffer(stream) {

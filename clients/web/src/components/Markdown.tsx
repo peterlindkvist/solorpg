@@ -94,7 +94,6 @@ export function Markdown({ story, updateMarkdown }: Props) {
   useEffect(() => {
     setMarkdown(story?.markdown ?? "");
   }, [story]);
-  console.log("commands", commands.getCommands());
 
   if (!story) {
     return <div>Loading...</div>;

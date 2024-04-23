@@ -191,10 +191,10 @@ export function renderMarkdown(markdown: string): string {
 
 export function markdownToStory(markdown: string, storyName: string): Story {
   const chapters = parseMarkdown(markdown);
-  const state: State = chapters[0].state ?? {};
+  const state: State = chapters[0]?.state ?? {};
   const story: Story = {
     id: storyName ?? "",
-    title: state.title ?? chapters[0].heading ?? "",
+    title: state.title ?? chapters[0]?.heading ?? "",
     markdown: markdown,
     chapters,
     images: findImages(chapters),
@@ -209,7 +209,7 @@ export function storyToMarkdown(story: Story): string {
 
 function chapterToMarkdown(chapter: Chapter): string {
   let ret = "";
-  ret = ret + `# ${chapter.heading}\n`;
+  ret = ret + `## ${chapter.heading}\n`;
   if (chapter.state) {
     ret =
       ret + "```\n" + JSON.stringify(chapter.state, undefined, 2) + "\n```\n\n";
@@ -238,6 +238,7 @@ function chapterToMarkdown(chapter: Chapter): string {
 }
 
 function codeToMarkdown(code: Code): string {
+  console.log("codeToMarkdown", code);
   let ret = "";
   ret = ret + `${code.condition} ?`;
   if (code.true) {

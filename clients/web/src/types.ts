@@ -58,7 +58,7 @@ export type State = {
   error?: string;
   theme?: Theme;
   voiceUrl?: string;
-  assistant: Assistant;
+  assistant?: Assistant;
 };
 
 export type Assistant = {
