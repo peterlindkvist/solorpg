@@ -3,11 +3,7 @@ import "./App.css";
 import { Markdown } from "./components/Markdown";
 import * as api from "./utils/api";
 import { Page, Story } from "./types";
-import {
-  markdownToStory,
-  storyToMarkdown,
-  storyToMermaid,
-} from "./utils/markdownUtils";
+import { markdownToStory, storyToMarkdown } from "./utils/markdownUtils";
 import { Chapters } from "./components/Chapters";
 import { Game } from "./components/Game";
 import { Images } from "./components/Images";
@@ -24,20 +20,12 @@ function App() {
         return;
       }
       const markdown = storyToMarkdown(story);
+      story.markdown = markdown;
       console.log("story", story);
       await api.saveStory(storyName, bookName, markdown);
       setStory(story);
     },
     [storyName, bookName]
-  );
-
-  const saveAndUpdateMarkdown = useCallback(
-    async (markdown: string, storyName: string) => {
-      const story = markdownToStory(markdown, storyName ?? "");
-      console.log("mermaid", storyToMermaid(story));
-      saveAndUpdateStory(story);
-    },
-    [storyName, saveAndUpdateStory]
   );
 
   const fetchStory = useCallback((storyName: string, bookName: string) => {
@@ -51,7 +39,7 @@ function App() {
 
   if (!storyName) {
     const url = new URL(window.location.href);
-    const [_, storyName, bookName] = url.pathname.split("/");
+    const [, storyName, bookName] = url.pathname.split("/");
     if (!storyName || !bookName) {
       window.location.href = "/test/grotta";
     } else {
@@ -79,7 +67,7 @@ function App() {
           </ul>
         )}
         {page === "edit" && (
-          <Markdown story={story} updateMarkdown={saveAndUpdateMarkdown} />
+          <Markdown story={story} updateStory={saveAndUpdateStory} />
         )}
         {page === "chapters" && (
           <Chapters story={story} updateStory={saveAndUpdateStory} />

@@ -9,7 +9,8 @@
     "start": "yarn server & yarn web",
     "server": "npx functions-framework --target=solorpg",
     "web": "cd ./clients/web && yarn dev",
-    "deploy": "gcloud functions deploy app --runtime=nodejs16 --trigger-http --allow-unauthenticated"
+    "deploy": "gcloud functions deploy app --runtime=nodejs16 --trigger-http --allow-unauthenticated",
+    "test": "yarn --cwd ./clients/web test"
   },
   "watch": {
     "start": {
@@ -26,7 +27,6 @@
     "@types/balanced-match": "^3.0.2",
     "@types/markdown-it": "^13.0.7",
     "@types/node": "^20.11.16",
-    "balanced-match": "^3.0.1",
     "busboy": "^1.6.0",
     "dotenv": "^16.4.1",
     "expr-eval": "^2.0.2",

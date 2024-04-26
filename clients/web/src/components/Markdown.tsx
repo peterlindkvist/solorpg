@@ -5,10 +5,11 @@ import { onImagePasted } from "./markdown/editorUtils";
 import * as api from "../utils/api";
 import { Story } from "../types";
 import * as soloapi from "../utils/api";
+import { markdownToStory, storyToMarkdown } from "../utils/markdownUtils";
 
 type Props = {
   story: Story | undefined;
-  updateMarkdown: (markdown: string, storyName: string) => void;
+  updateStory: (story: Story) => void;
 };
 
 function chatgptCommand(story: Story): commands.ICommand {
@@ -42,6 +43,9 @@ function chatgptCommand(story: Story): commands.ICommand {
       </svg>
     ),
     execute: async (state, api) => {
+      if (!story.settings.assistant) {
+        return;
+      }
       const newSelectionRange = selectWord({
         text: state.text,
         selection: state.selection,
@@ -57,13 +61,13 @@ function chatgptCommand(story: Story): commands.ICommand {
         const image = await soloapi.textToImage({
           storyId: story.id,
           description,
-          context: story.state.assistant.imageContext,
+          context: story.settings.assistant.imageContext,
         });
         newText = `![${description}](${image.url})`;
       } else {
         const text = await soloapi.textToText({
           text: selectedText,
-          context: story.state.assistant.textContext,
+          context: story.settings.assistant.textContext,
         });
         newText = text.text;
       }
@@ -79,7 +83,7 @@ function chatgptCommand(story: Story): commands.ICommand {
   };
 }
 
-export function Markdown({ story, updateMarkdown }: Props) {
+export function Markdown({ story, updateStory }: Props) {
   const [markdown, setMarkdown] = useState(story?.markdown ?? "");
 
   const fileUpload = useCallback(
@@ -90,6 +94,12 @@ export function Markdown({ story, updateMarkdown }: Props) {
     },
     [story]
   );
+
+  const onSave = useCallback(() => {
+    const updatedStory = markdownToStory(markdown, story?.id ?? "");
+    setMarkdown(storyToMarkdown(updatedStory));
+    updateStory(updatedStory);
+  }, [story, updateStory, markdown]);
 
   useEffect(() => {
     setMarkdown(story?.markdown ?? "");
@@ -112,10 +122,7 @@ export function Markdown({ story, updateMarkdown }: Props) {
           await onImagePasted(event.dataTransfer, setMarkdown, fileUpload);
         }}
       />
-      <button
-        className="button"
-        onClick={() => updateMarkdown(markdown, story?.id ?? "")}
-      >
+      <button className="button" onClick={() => onSave()}>
         Save
       </button>
     </div>

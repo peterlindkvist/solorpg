@@ -1,13 +1,24 @@
 import markdownit, { Token } from "markdown-it";
 import anchor from "markdown-it-anchor";
 import json5 from "json5";
-import balanced from "balanced-match";
-import { Chapter, Code, Image, Part, State, Story } from "../types";
+import {
+  Action,
+  Chapter,
+  Condition,
+  Image,
+  Paragraph,
+  Part,
+  Settings,
+  State,
+  Story,
+} from "../types";
 
 // default mode
 const md = markdownit({
   linkify: true,
 }).use(anchor);
+
+type CodeData = { active: boolean; parts: Part[]; token?: Token };
 
 function parseImage(image: Token): Image {
   const url = image.attrs?.find(([key]) => key === "src")?.[1];
@@ -15,85 +26,94 @@ function parseImage(image: Token): Image {
     type: "image",
     text: image.content,
     url,
-    markdown: `![${image.content}](${url ?? ""})`,
   };
 }
 
-function parseCode(token: Token, code: Token): Part | undefined {
-  const conditionMatch = code.content.match(/^([^#{?]*)\?/);
-  if (!conditionMatch) {
-    return parseCodePart(code.content);
-  } else {
-    const condition = conditionMatch[0].replace(/\s*\?$/, "");
-    const noCondition = code.content.replace(conditionMatch[0], "").trim();
-    const balance = balanced("{", "}", noCondition);
-    let truePart: Part | undefined = undefined;
-    let falsePart: Part | undefined = undefined;
-    if (!balance) {
-      const parts = noCondition.split(":");
-      truePart = parseCodePart(parts[0]);
-      falsePart = parseCodePart(parts[1]);
-    } else if (balance.start === 0) {
-      truePart = parseCodePart(`{${balance.body}}`);
-      falsePart = parseCodePart(
-        noCondition.slice(balance.end + 1).replace(/^\s*:/, "")
-      );
-    } else {
-      truePart = parseCodePart(
-        noCondition.slice(0, balance.start - 1).replace(/\s*:/, "")
-      );
-      falsePart = parseCodePart(`{${balance.body}}`);
-    }
-
+function parseNavigation(code: Token): Part | undefined {
+  const navigationMatch = code.content.match(/^->\s?\[([^\]]*)\]\(([^)]*)\)/);
+  if (navigationMatch) {
     return {
-      type: "code",
-      condition,
-      true: truePart,
-      false: falsePart,
-      markdown: code.content,
+      type: "navigation",
+      text: navigationMatch[1],
+      target: navigationMatch[2],
     };
   }
 }
 
-function parseCodePart(content: string): Part | undefined {
-  if (content === undefined || content === "") {
-    return undefined;
-  }
-  const trimmed = content.trim();
-  if (trimmed.startsWith("#")) {
-    return {
-      type: "navigation",
-      target: trimmed.slice(1),
-    };
-  } else if (trimmed.startsWith("{")) {
+function parseActionPart(content: string): Action {
+  try {
+    const state = json5.parse(content);
     return {
       type: "action",
-      event: json5.parse(trimmed),
+      state,
     };
-  } else {
+  } catch (e) {
+    const error = e instanceof Error ? e : new Error("unknown error");
     return {
-      type: "paragraph",
-      text: content,
+      type: "action",
       markdown: content,
+      state: {},
+      error: error.message,
     };
   }
+}
+
+function parseCode(codeData: CodeData): Condition {
+  let error: string | undefined;
+
+  const condition = codeData.token?.children
+    ?.at(0)
+    ?.content.replace(/\s*\{\s*?$/, "");
+
+  if (!condition) {
+    error = "Could not parse condition";
+  }
+  const childrenParts = [];
+  for (const children of codeData.token?.children ?? []) {
+    switch (children.type) {
+      case "text": {
+        const part: Paragraph = { type: "paragraph", text: children.content };
+        childrenParts.push(part);
+        break;
+      }
+    }
+  }
+
+  const allParts = [...childrenParts, ...codeData.parts];
+
+  if (allParts.length === 0) {
+    error = "No parts found in code block";
+  }
+
+  return {
+    type: "condition",
+    condition: condition ?? "",
+    true: allParts,
+    ...(error ? { error, markdown: codeData.token?.content } : {}),
+  };
 }
 
 export function parseMarkdown(markdown: string): Chapter[] {
   const tokens = md.parse(markdown, {});
-  // console.dir(tokens, { depth: 100 });
 
   const chapters: Array<Chapter> = [];
-  let chapter: Chapter = { voice: "", parts: [] };
+  let chapter: Chapter = { parts: [] };
   let inHeading = false;
+  let isFirstAction = true;
+  const inCode: { active: boolean; parts: Part[]; token?: Token } = {
+    active: false,
+    parts: [],
+  };
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
+    let part: Part | undefined;
+
     if (!token) continue;
 
     if (token.type === "heading_open") {
       inHeading = true;
-      chapter = { voice: "", parts: [] };
+      chapter = { parts: [] };
     }
     if (token.type === "heading_close") {
       inHeading = false;
@@ -107,12 +127,24 @@ export function parseMarkdown(markdown: string): Chapter[] {
       );
 
       if (code) {
-        const codePart = parseCode(token, code);
-        if (codePart) {
-          chapter.parts.push(codePart);
+        const navigation = parseNavigation(code);
+        if (navigation) {
+          part = navigation;
+        } else {
+          const isStart = token.children?.at(0)?.content.endsWith("{");
+          const isEnd = token.children?.at(-1)?.content.endsWith("}");
+          if (isStart) {
+            inCode.active = true;
+            inCode.parts = [];
+            inCode.token = token;
+          }
+          if (isEnd) {
+            inCode.active = false;
+            part = parseCode(inCode);
+          }
         }
       } else if (image) {
-        chapter.parts.push(parseImage(image));
+        part = parseImage(image);
       } else if (link && token.children) {
         const text = token.children
           .filter((token) => token.type === "text")
@@ -125,14 +157,13 @@ export function parseMarkdown(markdown: string): Chapter[] {
           ?.find(([key]) => key === "href")?.[1]
           ?.replace("#", "");
         if (text && target) {
-          chapter.voice = `${chapter.voice}${"\n"}${text}`;
-          chapter.parts.push({
+          part = {
             type: "choice",
             text,
             target,
             key,
             markdown: token.content,
-          });
+          };
         }
       } else {
         if (inHeading) {
@@ -141,28 +172,27 @@ export function parseMarkdown(markdown: string): Chapter[] {
             token.content.toLowerCase().replace(/ /g, "-")
           );
         } else {
-          const text =
-            chapter.text === undefined
-              ? token.content
-              : `${chapter.text}\n\n${token.content}`;
-          chapter.voice = `${chapter.voice}${"\n"}${token.content}`;
-          chapter.text = text;
-          chapter.parts.push({
+          part = {
             type: "paragraph",
             text: token.content,
-            markdown: token.content,
-          });
+          };
         }
       }
     }
     if (token.type === "fence") {
-      try {
-        chapter.state = json5.parse(token.content);
-      } catch (e) {
-        console.error(token.content, e);
-        const error = e instanceof Error ? e : new Error("Parse error");
-        chapter.state = { error: error.message };
+      part = parseActionPart(token.content);
+      if (isFirstAction) {
+        isFirstAction = false;
+        const { title, author, theme, voiceUrl, assistant, ...state } =
+          part.state as State & Settings;
+        part.state = state;
+
+        chapter.settings = { title, author, theme, voiceUrl, assistant };
       }
+    }
+
+    if (part) {
+      inCode.active ? inCode.parts.push(part) : chapter.parts.push(part);
     }
   }
 
@@ -177,11 +207,7 @@ export function findImages(chapters: Chapter[]): Image[] {
 
     return imageParts;
   });
-  // for (const chapter of chapters) {
-  //   if (chapter.parts.filter((part) => part.type === "image"){
-  //     images.push(chapter.image);
-  //   }
-  // }
+
   return images;
 }
 
@@ -191,14 +217,15 @@ export function renderMarkdown(markdown: string): string {
 
 export function markdownToStory(markdown: string, storyName: string): Story {
   const chapters = parseMarkdown(markdown);
-  const state: State = chapters[0]?.state ?? {};
+  console.log("markdownToStory", chapters.at(0)?.settings);
   const story: Story = {
     id: storyName ?? "",
-    title: state.title ?? chapters[0]?.heading ?? "",
+    title: chapters[0]?.heading ?? "",
     markdown: markdown,
     chapters,
     images: findImages(chapters),
-    state,
+    state: {},
+    settings: chapters.at(0)?.settings ?? {},
   };
   return story;
 }
@@ -210,57 +237,48 @@ export function storyToMarkdown(story: Story): string {
 function chapterToMarkdown(chapter: Chapter): string {
   let ret = "";
   ret = ret + `## ${chapter.heading}\n`;
-  if (chapter.state) {
-    ret =
-      ret + "```\n" + JSON.stringify(chapter.state, undefined, 2) + "\n```\n\n";
-  }
-  ret =
-    ret +
-    chapter.parts
-      .map((part) => {
-        switch (part.type) {
-          case "paragraph":
-            return `${part.text}\n\n`;
-          case "image":
-            return `![${part.text}](${part.url})\n\n`;
-          case "choice":
-            return `- [${part.text}](#${part.target})\n`;
-          case "action":
-            return "`" + JSON.stringify(part.event) + "`\n\n";
-          case "code":
-            return "`" + codeToMarkdown(part) + "`\n\n";
-          case "navigation":
-            return `#${part.target}\n`;
-        }
-      })
-      .join("");
+  ret = ret + partsToMarkdown(chapter.parts, chapter.settings);
+
   return ret;
 }
 
-function codeToMarkdown(code: Code): string {
-  console.log("codeToMarkdown", code);
-  let ret = "";
-  ret = ret + `${code.condition} ?`;
-  if (code.true) {
-    ret = `${ret} ${codePartToMarkdown(code.true)}`;
-  }
-  if (code.false) {
-    ret = `${ret} : ${codePartToMarkdown(code.false)}`;
-  }
-  return `${ret}`;
+export function partsToMarkdown(parts: Part[], settings?: Settings): string {
+  return parts
+    .map((part) => {
+      switch (part.type) {
+        case "paragraph":
+          return `${part.text}\n\n`;
+        case "image":
+          return `![${part.text}](${part.url})\n\n`;
+        case "choice":
+          return `- [${part.text}](#${part.target})\n`;
+        case "condition":
+          return conditionToMarkdown(part) + "\n\n";
+        case "navigation":
+          return `\`->[${part.text}](${part.target})\`\n\n`;
+        case "action":
+          return (
+            "```json\n" +
+            (part.markdown
+              ? part.markdown + part.error
+              : JSON.stringify({ ...settings, ...part.state }, undefined, 2)) +
+            "\n```\n\n"
+          );
+      }
+    })
+    .join("");
 }
 
-function codePartToMarkdown(event: Part): string {
-  switch (event.type) {
-    case "paragraph":
-      return `${event.text}`;
-    case "navigation":
-      return `#${event.target}`;
-    case "action":
-      return JSON.stringify(event.event);
-    default:
-      return "";
+function conditionToMarkdown(code: Condition): string {
+  let ret = "";
+  ret = ret + "`" + code.condition + " {`\n\n";
+  if (code.true) {
+    ret = `${ret}${partsToMarkdown(code.true)}`;
   }
+  if (code.false) {
+    ret = ret + "`}:{`\n\n" + partsToMarkdown(code.false);
+  }
+  return ret + "`}`";
 }
 
 export function storyToMermaid(story: Story): string {

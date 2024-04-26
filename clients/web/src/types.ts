@@ -1,12 +1,8 @@
 export type Chapter = {
   id?: string;
   heading?: string;
-  text?: string;
-  voice?: string;
-  // image?: Image;
-  // choices: Array<{ text: string; target: string; key: string }>;
-  state?: State;
   parts: Array<Part>;
+  settings?: Settings;
 };
 
 export type Choice = {
@@ -20,39 +16,42 @@ export type Choice = {
 export type Image = {
   type: "image";
   url?: string;
-  markdown: string;
   text: string;
 };
 
 export type Paragraph = {
   type: "paragraph";
   text: string;
-  markdown: string;
 };
 
-export type Code = {
-  type: "code";
+export type Condition = {
+  type: "condition";
   condition: string;
-  true?: Part;
-  false?: Part;
-  markdown: string;
+  text?: string;
+  true?: Part[];
+  false?: Part[];
+  markdown?: string;
+  error?: string;
 };
 
 export type Navigation = {
   type: "navigation";
+  text: string;
   target: string;
 };
 
 export type Action = {
   type: "action";
-  event: Record<string, string | number>;
+  state: State;
   text?: string;
+  markdown?: string;
+  error?: string;
 };
 
-export type Part = Choice | Image | Paragraph | Code | Navigation | Action;
+export type Part = Choice | Image | Paragraph | Condition | Navigation | Action;
 export type RenderPart = Image | Paragraph | Choice | Navigation;
 
-export type State = {
+export type Settings = {
   title?: string;
   author?: string;
   error?: string;
@@ -74,6 +73,8 @@ export type Theme = {
   backgroundColor: string;
 };
 
+export type State = Record<string, string | number>;
+
 export type Story = {
   id: string;
   title: string;
@@ -81,6 +82,7 @@ export type Story = {
   chapters: Chapter[];
   images: Image[];
   state: State;
+  settings: Settings;
 };
 
 export type Page = "edit" | "game" | "chapters" | "images";

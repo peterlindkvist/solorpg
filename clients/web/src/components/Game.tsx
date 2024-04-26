@@ -6,7 +6,7 @@ import * as api from "../utils/api";
 import "./Game.css";
 import { ImagePart } from "./game/ImagePart";
 import { ButtonPart } from "./game/ButtonPart";
-import { parseChapter } from "./game/gameUtils";
+import { parseChapter } from "../utils/gameUtils";
 import { Header } from "./game/Header";
 
 type Props = {
@@ -80,6 +80,7 @@ export function Game(props: Props) {
     (chapter: Chapter) => {
       if (state) {
         const { parts, newState } = parseChapter(chapter, state);
+        console.log("--------parts", parts);
         console.log("newState", newState);
         setRenderParts(parts);
         setState(newState);
@@ -141,19 +142,19 @@ export function Game(props: Props) {
           if (part.type === "paragraph") {
             return <p key={i}>{part.text}</p>;
           }
-          if (part.type === "action") {
+          if (part.type === "action" || part.type === "condition") {
             return <code key={i}>{part.text}</code>;
           }
         })}
       </div>
-      {sound && chapter?.state?.voiceUrl && (
+      {/* {sound && chapter?.state?.voiceUrl && (
         <audio
           src={chapter.state?.voiceUrl}
           controls
           autoPlay
           onEnded={() => voice && recordVoice()}
         />
-      )}
+      )} */}
     </div>
   );
 }

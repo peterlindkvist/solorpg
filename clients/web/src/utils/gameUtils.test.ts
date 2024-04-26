@@ -1,23 +1,63 @@
 import { describe, expect, test } from "@jest/globals";
-import { Action } from "../../types";
-import { evaluateAction, replaceWithState } from "./gameUtils";
+import { Action, Condition } from "../types";
+import {
+  evaluateAction,
+  evaluateCondition,
+  replaceWithState,
+} from "./gameUtils";
 
 describe("gameUtils", () => {
   describe("replaceWithState", () => {
     test("replaceWithState", () => {
       expect(replaceWithState("text", {})).toBe("text");
-      expect(replaceWithState("strength d6", { strength: 4, agility: 3 })).toBe(
-        "4 d6"
+      expect(
+        replaceWithState("$strength d6", { strength: 4, agility: 3 })
+      ).toBe("4 d6");
+      expect(replaceWithState("$a + $a + $b", { a: 2, b: 3 })).toBe(
+        "2 + 2 + 3"
       );
-      expect(replaceWithState("a + a + b", { a: 2, b: 3 })).toBe("2 + 2 + 3");
     });
   });
-
+  describe.only("evaluateCondition", () => {
+    test("with dice", () => {
+      const condition: Condition = {
+        type: "condition",
+        condition: "4+[d1] < 4",
+      };
+      const { isTrue, renderPart } = evaluateCondition(condition, {});
+      expect(renderPart.text).toEqual("4+[d1] < 4 -> 4+1<4 -> false");
+      expect(isTrue).toBe(false);
+    });
+    test("with variable", () => {
+      const condition: Condition = {
+        type: "condition",
+        condition: "$strength >= 12",
+      };
+      const { isTrue, renderPart } = evaluateCondition(condition, {
+        strength: 14,
+      });
+      expect(renderPart.text).toEqual("$strength >= 12 -> 14>=12 -> true");
+      expect(isTrue).toBe(true);
+    });
+    test("with variable and dice", () => {
+      const condition: Condition = {
+        type: "condition",
+        condition: "$strength <= [2d1+20]",
+      };
+      const { isTrue, renderPart } = evaluateCondition(condition, {
+        strength: 14,
+      });
+      expect(renderPart.text).toEqual(
+        "$strength <= [2d1+20] -> 14<=22 -> true"
+      );
+      expect(isTrue).toBe(true);
+    });
+  });
   describe("evaluateAction", () => {
     test("simple set action", () => {
       const action: Action = {
         type: "action",
-        event: {
+        state: {
           rope: 1,
         },
       };
@@ -29,7 +69,7 @@ describe("gameUtils", () => {
     test("simple increase action", () => {
       const action: Action = {
         type: "action",
-        event: {
+        state: {
           rope: "+=2",
         },
       };
@@ -41,7 +81,7 @@ describe("gameUtils", () => {
     test("simple decrease action", () => {
       const action: Action = {
         type: "action",
-        event: {
+        state: {
           rope: "-=3",
         },
       };
@@ -53,7 +93,7 @@ describe("gameUtils", () => {
     test("multiple states action", () => {
       const action: Action = {
         type: "action",
-        event: {
+        state: {
           pancakes: "+=1",
           egg: "-=1",
           milk: "-=1",
@@ -69,8 +109,8 @@ describe("gameUtils", () => {
     test("evaluate calculation states", () => {
       const action: Action = {
         type: "action",
-        event: {
-          cupper: "gold * 100 + silver * 10 + cupper",
+        state: {
+          cupper: "$gold * 100 + $silver * 10 + $cupper",
           gold: 0,
           silver: 0,
         },
@@ -89,7 +129,7 @@ describe("gameUtils", () => {
     test("evaluate with dices", () => {
       const action: Action = {
         type: "action",
-        event: {
+        state: {
           rolld6: "[d1]",
         },
       };
