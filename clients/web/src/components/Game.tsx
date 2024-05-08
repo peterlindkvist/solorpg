@@ -76,12 +76,17 @@ export function Game(props: Props) {
     [story, chapter, recordVoice]
   );
 
+  const setHash = useCallback((chapterId: string, state: State = {}) => {
+    const hash = chapterId + "?state=" + btoa(JSON.stringify(state));
+    window.location.hash = hash;
+  }, []);
+
   const setNewChapter = useCallback(
-    (chapterId: string) => {
-      if (state && chapterId && chapterId !== chapter?.id) {
+    (chapterId: string, oldState: State) => {
+      if (chapterId && chapterId !== chapter?.id) {
         const newChapter = story?.chapters.find((c) => c.id === chapterId);
         if (newChapter) {
-          const { parts, newState } = parseChapter(newChapter, state);
+          const { parts, newState } = parseChapter(newChapter, oldState);
           setRenderParts(parts);
           setState(newState);
           setChapter(newChapter);
@@ -90,27 +95,24 @@ export function Game(props: Props) {
         }
       }
     },
-    [state, story, chapter]
+    [story, chapter]
   );
 
   const navigateToChapter = useCallback(
     (id: string) => {
       const nextChapter = story?.chapters.find((c) => c.id === id);
       if (nextChapter) {
-        window.location.hash = id;
+        setHash(id, state);
       }
     },
-    [story]
+    [story, state, setHash]
   );
 
-  if (story !== props.story) {
-    setStory(props.story);
-    setState(props.story?.state);
-  }
-
   const hashChangeHandler = useCallback(() => {
-    const chapterId = window.location.hash.substring(1);
-    setNewChapter(chapterId);
+    const [chapterId, stateJSON] = window.location.hash
+      .substring(1)
+      .split("?state=");
+    setNewChapter(chapterId, stateJSON ? JSON.parse(atob(stateJSON)) : {});
   }, [setNewChapter]);
 
   useEffect(() => {
@@ -122,9 +124,15 @@ export function Game(props: Props) {
     };
   }, [hashChangeHandler]);
 
+  if (story !== props.story) {
+    setStory(props.story);
+  }
+
   const chapterId = window.location.hash.substring(1);
-  if (!chapterId && story?.chapters[0]?.id) {
-    window.location.hash = story.chapters[0]?.id;
+  if (!chapterId && props?.story?.chapters[0]?.id) {
+    const chapter = props.story?.chapters[0]?.id;
+    const state = props.story?.state;
+    setHash(chapter, state);
   }
 
   return (
