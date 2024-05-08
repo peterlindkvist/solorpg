@@ -17,3 +17,10 @@
 .game-text img {
   max-width: 400px;
 }
+.game-action {
+  font-size: 0.7em;
+  line-height: 2;
+  text-align: center;
+  background-color: rgb(230, 228, 228);
+  padding: 10px;
+}

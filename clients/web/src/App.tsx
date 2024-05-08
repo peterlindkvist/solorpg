@@ -39,11 +39,16 @@ function App() {
 
   if (!storyName) {
     const url = new URL(window.location.href);
-    const [, storyName, bookName] = url.pathname.split("/");
-    if (!storyName || !bookName) {
-      window.location.href = "/test/grotta";
+    const [, page, storyName, bookName] = url.pathname.split("/");
+    if (
+      !storyName ||
+      !bookName ||
+      !["edit", "game", "images", "chapters"].includes(page)
+    ) {
+      window.location.href = "/game/test/grotta";
     } else {
       fetchStory(storyName, bookName);
+      setPage(page as Page);
     }
   }
 

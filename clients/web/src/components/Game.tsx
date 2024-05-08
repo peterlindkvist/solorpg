@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Chapter, Choice, Part, State, Story } from "../types";
 import { useReactMediaRecorder } from "react-media-recorder";
 import * as api from "../utils/api";
@@ -77,27 +77,30 @@ export function Game(props: Props) {
   );
 
   const setNewChapter = useCallback(
-    (chapter: Chapter) => {
-      if (state) {
-        const { parts, newState } = parseChapter(chapter, state);
-        console.log("--------parts", parts);
-        console.log("newState", newState);
-        setRenderParts(parts);
-        setState(newState);
-        setChapter(chapter);
+    (chapterId: string) => {
+      if (state && chapterId && chapterId !== chapter?.id) {
+        const newChapter = story?.chapters.find((c) => c.id === chapterId);
+        if (newChapter) {
+          const { parts, newState } = parseChapter(newChapter, state);
+          setRenderParts(parts);
+          setState(newState);
+          setChapter(newChapter);
+        } else {
+          console.error("chapter not found", chapterId);
+        }
       }
     },
-    [state]
+    [state, story, chapter]
   );
 
   const navigateToChapter = useCallback(
     (id: string) => {
       const nextChapter = story?.chapters.find((c) => c.id === id);
       if (nextChapter) {
-        setNewChapter(nextChapter);
+        window.location.hash = id;
       }
     },
-    [story, setNewChapter]
+    [story]
   );
 
   if (story !== props.story) {
@@ -105,16 +108,24 @@ export function Game(props: Props) {
     setState(props.story?.state);
   }
 
-  if (!chapter && story) {
-    const newChapter = props.story?.chapters[0];
-    if (newChapter) {
-      setNewChapter(newChapter);
-    }
-  }
+  const hashChangeHandler = useCallback(() => {
+    const chapterId = window.location.hash.substring(1);
+    setNewChapter(chapterId);
+  }, [setNewChapter]);
 
-  // if (!story || !chapter) {
-  //   return null;
-  // }
+  useEffect(() => {
+    window.addEventListener("hashchange", hashChangeHandler);
+    hashChangeHandler();
+
+    return () => {
+      window.removeEventListener("hashchange", hashChangeHandler);
+    };
+  }, [hashChangeHandler]);
+
+  const chapterId = window.location.hash.substring(1);
+  if (!chapterId && story?.chapters[0]?.id) {
+    window.location.hash = story.chapters[0]?.id;
+  }
 
   return (
     <div
@@ -143,7 +154,11 @@ export function Game(props: Props) {
             return <p key={i}>{part.text}</p>;
           }
           if (part.type === "action" || part.type === "condition") {
-            return <code key={i}>{part.text}</code>;
+            return (
+              <code className="game-action" key={i}>
+                {part.text}
+              </code>
+            );
           }
         })}
       </div>

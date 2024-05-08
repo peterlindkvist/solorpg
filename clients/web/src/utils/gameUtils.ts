@@ -61,14 +61,23 @@ export function evaluateAction(
 
   const newValues = Object.fromEntries(
     Object.entries(action.state).map(([key, value]) => {
-      const oldValue = flattenState[key] ?? 0;
+      const oldValue = flattenState[key];
       const { value: newValue, rolls } = evaluateActionValue(
         key,
         value,
         withMissingKeys
       );
-      const arrow = rolls ? `-${rolls}->` : "->";
-      texts.push(`${key}: ${oldValue} ${arrow} ${newValue}`);
+      if (oldValue !== newValue) {
+        let text = oldValue ? `${oldValue} -` : "";
+        text = `${text}${rolls ? `${rolls}` : ""}`;
+        text = `${text}${oldValue || rolls ? "->" : ""}`;
+        text = `${text} ${newValue}`;
+        console.log("text", { oldValue, newValue });
+        texts.push(`${key}: ${text}`);
+      }
+
+      // const start = oldValue ? `${oldValue} -` : "";
+      // const arrow = rolls ? `${rolls}->` : "->";
       return [key, newValue];
     })
   );
@@ -166,10 +175,16 @@ export function updateState(action: Action, state: State): State {
 }
 
 function evaluateValue(value: string | number): string | number | undefined {
-  const parser = Parser.parse(value.toString());
-  const variables = parser.variables();
-  if (variables.length === 0) {
-    return parser.evaluate();
+  if (!value) return;
+  try {
+    const parser = Parser.parse(value.toString());
+    const variables = parser.variables();
+    if (variables.length === 0) {
+      return parser.evaluate();
+    }
+    return value;
+  } catch (e) {
+    console.error("Error parsing value", { value });
+    return value;
   }
-  return value;
 }
