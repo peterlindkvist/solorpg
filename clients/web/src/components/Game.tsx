@@ -26,7 +26,7 @@ export function Game(props: Props) {
   const [state, setState] = useState<State>();
 
   const { startRecording, stopRecording } = useReactMediaRecorder({
-    audio: true,
+    audio: voice,
     video: false,
     askPermissionOnMount: true,
     onStop: (_blobUrl, blob) => {

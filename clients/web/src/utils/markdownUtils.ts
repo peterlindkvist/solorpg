@@ -179,7 +179,7 @@ export function parseMarkdown(markdown: string): Chapter[] {
         }
       }
     }
-    if (token.type === "fence") {
+    if (token.type === "fence" && token.info !== "mermaid") {
       part = parseActionPart(token.content);
       if (isFirstAction) {
         isFirstAction = false;
@@ -217,7 +217,6 @@ export function renderMarkdown(markdown: string): string {
 
 export function markdownToStory(markdown: string, storyName: string): Story {
   const chapters = parseMarkdown(markdown);
-  console.log("markdownToStory", chapters.at(0)?.settings);
   const story: Story = {
     id: storyName ?? "",
     title: chapters[0]?.heading ?? "",
@@ -231,7 +230,12 @@ export function markdownToStory(markdown: string, storyName: string): Story {
 }
 
 export function storyToMarkdown(story: Story): string {
-  return story.chapters.map((chapter) => chapterToMarkdown(chapter)).join("\n");
+  const mermaid = storyToMermaid(story);
+  console.log("storyToMarkdown", mermaid);
+  const chapters = story.chapters
+    .map((chapter) => chapterToMarkdown(chapter))
+    .join("\n");
+  return `${chapters}\n\n\`\`\`mermaid\n${mermaid}\n\`\`\``;
 }
 
 function chapterToMarkdown(chapter: Chapter): string {

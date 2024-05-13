@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import "./Markdown.css";
 import MDEditor, { commands, selectWord } from "@uiw/react-md-editor";
 import { onImagePasted } from "./markdown/editorUtils";
@@ -6,10 +6,64 @@ import * as api from "../utils/api";
 import { Story } from "../types";
 import * as soloapi from "../utils/api";
 import { markdownToStory, storyToMarkdown } from "../utils/markdownUtils";
+import { getCodeString } from "rehype-rewrite";
+import mermaid from "mermaid";
 
 type Props = {
   story: Story | undefined;
   updateStory: (story: Story) => void;
+};
+
+// https://github.com/uiwjs/react-md-editor?tab=readme-ov-file#support-custom-mermaid-preview
+const randomid = () => parseInt(String(Math.random() * 1e15), 10).toString(36);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Code = (props: any) => {
+  const demoid = useRef(`dome${randomid()}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [container, setContainer] = useState<any>(null);
+  const isMermaid =
+    props.className &&
+    /^language-mermaid/.test(props.className.toLocaleLowerCase());
+  const code = props.children
+    ? getCodeString(props.node.children)
+    : props.children[0] || "";
+
+  useEffect(() => {
+    if (container && isMermaid && demoid.current && code) {
+      mermaid
+        .render(demoid.current, code)
+        .then(({ svg, bindFunctions }) => {
+          container.innerHTML = svg;
+          if (bindFunctions) {
+            bindFunctions(container);
+          }
+        })
+        .catch((error) => {
+          console.log("error:", error);
+        });
+    }
+  }, [container, isMermaid, code, demoid]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const refElement = useCallback((node: any) => {
+    if (node !== null) {
+      setContainer(node);
+    }
+  }, []);
+
+  if (isMermaid) {
+    return (
+      <Fragment>
+        <code id={demoid.current} style={{ display: "none" }} />
+        <code
+          className={props.className}
+          ref={refElement}
+          data-name="mermaid"
+        />
+      </Fragment>
+    );
+  }
+  return <code className={props.className}>{props.children}</code>;
 };
 
 function chatgptCommand(story: Story): commands.ICommand {
@@ -120,6 +174,11 @@ export function Markdown({ story, updateStory }: Props) {
         }}
         onDrop={async (event) => {
           await onImagePasted(event.dataTransfer, setMarkdown, fileUpload);
+        }}
+        previewOptions={{
+          components: {
+            code: Code,
+          },
         }}
       />
       <button className="button" onClick={() => onSave()}>
