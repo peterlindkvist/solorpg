@@ -100,7 +100,8 @@ export function Game(props: Props) {
 
   const navigateToChapter = useCallback(
     (id: string) => {
-      const nextChapter = story?.chapters.find((c) => c.id === id);
+      const chapterId = id.replace(/^#/, "");
+      const nextChapter = story?.chapters.find((c) => c.id === chapterId);
       if (nextChapter) {
         setHash(id, state);
       }

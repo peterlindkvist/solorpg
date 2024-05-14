@@ -4,8 +4,10 @@ import json5 from "json5";
 import {
   Action,
   Chapter,
+  Choice,
   Condition,
   Image,
+  Navigation,
   Paragraph,
   Part,
   Settings,
@@ -155,7 +157,7 @@ export function parseMarkdown(markdown: string): Chapter[] {
         const key = token.children[linkOpenIndex + 1]?.content.toLowerCase();
         const target = link.attrs
           ?.find(([key]) => key === "href")?.[1]
-          ?.replace("#", "");
+          ?.replace("", "");
         if (text && target) {
           part = {
             type: "choice",
@@ -255,7 +257,7 @@ export function partsToMarkdown(parts: Part[], settings?: Settings): string {
         case "image":
           return `![${part.text}](${part.url})\n\n`;
         case "choice":
-          return `- [${part.text}](#${part.target})\n`;
+          return `- [${part.text}](${part.target})\n`;
         case "condition":
           return conditionToMarkdown(part) + "\n\n";
         case "navigation":
@@ -277,7 +279,7 @@ function conditionToMarkdown(code: Condition): string {
   let ret = "";
   ret = ret + "`" + code.condition + " {`\n\n";
   if (code.true) {
-    ret = `${ret}${partsToMarkdown(code.true)}`;
+    ret = `${ret}${partsToMarkdown(code.true)}\n`;
   }
   if (code.false) {
     ret = ret + "`}:{`\n\n" + partsToMarkdown(code.false);
@@ -288,10 +290,26 @@ function conditionToMarkdown(code: Condition): string {
 export function storyToMermaid(story: Story): string {
   let ret = "flowchart TD\n";
   for (const chapter of story.chapters) {
-    ret = `${ret}    ${chapter.id}["${chapter.heading}"]\n`;
+    const hasAction = chapter.parts.find((part) => part.type === "action");
+    const icon = hasAction ? " ⭐" : "";
+
+    //🤖
+    ret = `${ret}    ${chapter.id}["${chapter.heading}${icon}"]\n`;
+    ret = `${ret}    click ${chapter.id} "#${chapter.id}"\n`;
     for (const part of chapter.parts) {
       if (part.type === "choice") {
-        ret = `${ret}    ${chapter.id} -->|${part.text}| ${part.target}\n`;
+        const target = part.target.replace(/^#/, "");
+        ret = `${ret}    ${chapter.id} -->|"${part.text}"| ${target}\n`;
+      }
+      if (part.type === "condition") {
+        const navigationPart = part.true?.find((part) =>
+          ["navigation", "choice"].includes(part.type)
+        ) as Navigation | Choice | undefined;
+        console.log("navigationPart", navigationPart);
+        if (navigationPart) {
+          const target = navigationPart.target.replace(/^#/, "");
+          ret = `${ret}    ${chapter.id} -.->|"${part.condition}"| ${target}\n`;
+        }
       }
     }
   }
