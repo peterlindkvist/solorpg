@@ -24,6 +24,11 @@ export type Paragraph = {
   text: string;
 };
 
+export type Comment = {
+  type: "comment";
+  text: string;
+};
+
 export type Condition = {
   type: "condition";
   condition: string;
@@ -48,7 +53,14 @@ export type Action = {
   error?: string;
 };
 
-export type Part = Choice | Image | Paragraph | Condition | Navigation | Action;
+export type Part =
+  | Choice
+  | Image
+  | Paragraph
+  | Condition
+  | Navigation
+  | Action
+  | Comment;
 export type RenderPart = Image | Paragraph | Choice | Navigation;
 
 export type Settings = {

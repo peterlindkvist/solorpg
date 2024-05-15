@@ -28,7 +28,7 @@ const Code = (props: any) => {
     /^language-mermaid/.test(props.className.toLocaleLowerCase());
   const code = props.children
     ? getCodeString(props.node.children)
-    : props.children[0] || "";
+    : props.children?.[0] || "";
 
   useEffect(() => {
     if (container && isMermaid && demoid.current && code) {
@@ -167,9 +167,16 @@ export function Markdown({ story, updateStory }: Props) {
   return (
     <div>
       <MDEditor
-        height={700}
+        height={window.innerHeight - 200}
         value={markdown}
-        commands={[...commands.getCommands(), chatgptCommand(story)]}
+        commands={[
+          commands.link,
+          commands.image,
+          commands.code,
+          commands.codeBlock,
+          commands.comment,
+          chatgptCommand(story),
+        ]}
         onChange={(value) => setMarkdown(value ?? "")}
         onPaste={async (event) => {
           await onImagePasted(event.clipboardData, setMarkdown, fileUpload);
