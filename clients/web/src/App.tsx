@@ -4,9 +4,7 @@ import { Markdown } from "./components/Markdown";
 import * as api from "./utils/api";
 import { Page, Story } from "./types";
 import { markdownToStory, storyToMarkdown } from "./utils/markdownUtils";
-import { Chapters } from "./components/Chapters";
 import { Game } from "./components/Game";
-import { Images } from "./components/Images";
 
 function App() {
   const [storyName, setStoryName] = useState<string>();
@@ -39,13 +37,13 @@ function App() {
 
   if (!storyName) {
     const url = new URL(window.location.href);
-    const [, page, storyName, bookName] = url.pathname.split("/");
+    const [, folder, page, storyName, bookName] = url.pathname.split("/");
     if (
       !storyName ||
       !bookName ||
       !["edit", "game", "images", "chapters"].includes(page)
     ) {
-      window.location.href = "/game/test/grotta";
+      window.location.href = `${folder}/game/test/grotta`;
     } else {
       fetchStory(storyName, bookName);
       setPage(page as Page);
@@ -63,22 +61,10 @@ function App() {
             <li>
               <button onClick={() => setPage("game")}>Game</button>
             </li>
-            <li>
-              <button onClick={() => setPage("images")}>Images</button>
-            </li>
-            <li>
-              <button onClick={() => setPage("chapters")}>Chapters</button>
-            </li>
           </ul>
         )}
         {page === "edit" && (
           <Markdown story={story} updateStory={saveAndUpdateStory} />
-        )}
-        {page === "chapters" && (
-          <Chapters story={story} updateStory={saveAndUpdateStory} />
-        )}
-        {page === "images" && story && (
-          <Images story={story} updateStory={saveAndUpdateStory} />
         )}
       </div>
       <div className="game-container">

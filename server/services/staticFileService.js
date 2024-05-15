@@ -4,7 +4,7 @@ const mime = require("mime-types");
 function getStaticFile(folder, filename, fallbackToIndex = false) {
   filename = filename === "/" ? "/index.html" : filename;
   const path = `${folder}${filename}`;
-  console.log("path", path);
+  console.log("path", path, fallbackToIndex, fs.existsSync(path));
   if (fs.existsSync(path)) {
     const content = fs.readFileSync(path);
     return {

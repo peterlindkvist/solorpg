@@ -23,6 +23,8 @@ async function solorpg(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, PUT, GET, OPTIONS");
 
+  console.log("REQ", req.method, req.path);
+
   if (req.path.startsWith("/api/stories")) {
     if (req.method === "GET") {
       const filePath = req.path.replace("/api/stories/", "");
@@ -117,7 +119,7 @@ async function solorpg(req, res) {
     }
   }
 
-  const file = getStaticFile(`${__dirname}/clients/web/dist`, req.path, true);
+  const file = getStaticFile(`${__dirname}/server/public`, req.path, true);
 
   res.setHeader("Content-Type", file.mime);
 

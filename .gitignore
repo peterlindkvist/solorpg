@@ -2,3 +2,5 @@
 node_modules
 assets/
 solorpg-keystorage.json
+server/public
+tsconfig.json

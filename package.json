@@ -9,7 +9,9 @@
     "start": "yarn server & yarn web",
     "server": "npx functions-framework --target=solorpg",
     "web": "cd ./clients/web && yarn dev",
-    "deploy": "gcloud functions deploy app --runtime=nodejs16 --trigger-http --allow-unauthenticated",
+    "build": "cd ./clients/web && rm -Rf ../../server/public && yarn build && cp -r ./dist ../../server/public",
+    "deploy": "gcloud functions deploy solorpg --runtime=nodejs18 --trigger-http --allow-unauthenticated --set-env-vars `cat .env`",
+    "release": "yarn build && yarn deploy",
     "test": "yarn --cwd ./clients/web test"
   },
   "watch": {
@@ -34,6 +36,7 @@
     "markdown-it": "^14.0.0",
     "markdown-it-anchor": "^8.6.7",
     "mime-type": "^4.0.0",
+    "openai": "^4.47.1",
     "watch": "^1.0.2"
   },
   "devDependencies": {
