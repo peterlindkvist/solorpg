@@ -10,7 +10,7 @@
     "server": "npx functions-framework --target=solorpg",
     "web": "cd ./clients/web && yarn dev",
     "build": "cd ./clients/web && rm -Rf ../../server/public && yarn build && cp -r ./dist ../../server/public",
-    "deploy": "gcloud functions deploy solorpg --runtime=nodejs18 --trigger-http --allow-unauthenticated --set-env-vars `cat .env`",
+    "deploy": "gcloud functions deploy solorpg --runtime=nodejs18 --gen2 --region europe-north1 --trigger-http --allow-unauthenticated --set-env-vars `cat .env`",
     "release": "yarn build && yarn deploy",
     "test": "yarn --cwd ./clients/web test"
   },

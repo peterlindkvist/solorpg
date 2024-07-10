@@ -53,7 +53,7 @@ async function solorpg(req, res) {
         `${storyId}/${ret.fileName}`
       );
 
-      res.send({ url: image.url });
+      res.send({ url: image.url, text: ret.prompt });
       return;
     }
     if (req.method === "POST") {

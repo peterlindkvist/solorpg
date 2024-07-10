@@ -1,6 +1,8 @@
 import { Image } from "../types";
 
-const apiPath = "http://localhost:8080/api";
+const apiPath = window.location.host.startsWith("localhost")
+  ? "http://localhost:8080/api"
+  : "/solorpg/api";
 
 export function getStory(storyId: string, bookName: string): Promise<string> {
   return fetch(`${apiPath}/stories/${storyId}/${bookName}.md`).then((res) =>

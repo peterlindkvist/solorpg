@@ -17,5 +17,5 @@ node_modules
 #!include:.gitignore
 !server/public
 !server/public/assets
-!solorpg-keystore.json
+!solorpg-keystorage.json
 clients

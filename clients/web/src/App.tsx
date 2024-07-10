@@ -53,18 +53,12 @@ function App() {
   return (
     <>
       <div className="editor-container">
-        {page !== "game" && (
-          <ul className="menu-container">
-            <li>
-              <button onClick={() => setPage("edit")}>Edit</button>
-            </li>
-            <li>
-              <button onClick={() => setPage("game")}>Game</button>
-            </li>
-          </ul>
-        )}
-        {page === "edit" && (
-          <Markdown story={story} updateStory={saveAndUpdateStory} />
+        {page === "edit" && story && (
+          <Markdown
+            story={story}
+            updateStory={saveAndUpdateStory}
+            setPage={setPage}
+          />
         )}
       </div>
       <div className="game-container">

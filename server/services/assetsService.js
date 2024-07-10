@@ -19,16 +19,16 @@ async function textToImage(description, context, renderType) {
     size: "1024x1024",
   };
   const response = await openai.images.generate(query);
+  console.log("response", response);
   const fileName = `${hashString(prompt)}.jpg`;
-  const filePath = `${__dirname}/../../assets/${fileName}`;
-  const url = response?.data?.[0]?.url;
-  if (!url) {
+  const data = response?.data?.[0];
+  if (!data) {
     console.error(response);
-    throw new Error("No image url found");
+    throw new Error("No image found");
   }
-  // await saveImage(url, filePath);
   return {
-    url,
+    url: data.url,
+    prompt: data.revised_prompt,
     fileName,
   };
 }

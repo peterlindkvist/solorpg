@@ -1,17 +1,22 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import "./Markdown.css";
-import MDEditor, { commands, selectWord } from "@uiw/react-md-editor";
+import MDEditor, {
+  commands,
+  getExtraCommands,
+  selectWord,
+} from "@uiw/react-md-editor";
 import { onImagePasted } from "./markdown/editorUtils";
 import * as api from "../utils/api";
-import { Story } from "../types";
+import { Page, Story } from "../types";
 import * as soloapi from "../utils/api";
 import { markdownToStory, storyToMarkdown } from "../utils/markdownUtils";
 import { getCodeString } from "rehype-rewrite";
 import mermaid from "mermaid";
 
 type Props = {
-  story: Story | undefined;
+  story: Story;
   updateStory: (story: Story) => void;
+  setPage: (page: Page) => void;
 };
 
 mermaid.initialize({ securityLevel: "loose" });
@@ -68,13 +73,13 @@ const Code = (props: any) => {
   return <code className={props.className}>{props.children}</code>;
 };
 
-function chatgptCommand(story: Story): commands.ICommand {
+function chatgptCommand({ story }: Props): commands.ICommand {
   return {
     name: "ChatGPT",
     keyCommand: "chatgpt",
     buttonProps: { "aria-label": "Insert ChatGPT text" },
     icon: (
-      <svg width="20" height="20" viewBox="0 0 1081.86 818.92">
+      <svg width="15" height="15" viewBox="0 0 1081.86 818.92">
         <path
           fill="currentColor"
           d="M832.28,347.74c15.43-46.33,10.12-97.06-14.56-139.19c-37.11-64.63-111.73-97.87-184.59-82.23
@@ -119,7 +124,8 @@ function chatgptCommand(story: Story): commands.ICommand {
           description,
           context: story.settings.assistant.imageContext,
         });
-        newText = `![${description}](${image.url})`;
+        // newText = `![${description}](${image.url})`;
+        newText = `![${image.text}](${image.url})`;
       } else {
         const text = await soloapi.textToText({
           text: selectedText,
@@ -139,8 +145,97 @@ function chatgptCommand(story: Story): commands.ICommand {
   };
 }
 
-export function Markdown({ story, updateStory }: Props) {
+function startGameCommand({ setPage }: Props): commands.ICommand {
+  return {
+    name: "start game",
+    keyCommand: "startGame",
+    buttonProps: { "aria-label": "Start Game" },
+    icon: (
+      <svg
+        width="13"
+        height="13"
+        xmlns="http://www.w3.org/2000/svg"
+        fill-rule="evenodd"
+        clip-rule="evenodd"
+        viewBox="0 0 24 24"
+      >
+        <path d="M23 12l-22 12v-24l22 12zm-21 10.315l18.912-10.315-18.912-10.315v20.63z" />
+      </svg>
+    ),
+    execute: async () => {
+      const folder = window.location.pathname.split("/").at(1);
+      console.log(folder, window.location.pathname.split("/"));
+      setPage("game");
+    },
+  };
+}
+
+function saveCommand(onSave: () => void): commands.ICommand {
+  return {
+    name: "start game",
+    keyCommand: "startGame",
+    buttonProps: { "aria-label": "Start Game" },
+    icon: (
+      <svg
+        width="13px"
+        height="13px"
+        viewBox="0 0 24 24"
+        role="img"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-labelledby="saveIconTitle"
+        stroke="#000000"
+        stroke-width="1"
+        stroke-linecap="square"
+        stroke-linejoin="miter"
+        fill="none"
+        color="#000000"
+      >
+        <title id="saveIconTitle">Save</title>{" "}
+        <path d="M17.2928932,3.29289322 L21,7 L21,20 C21,20.5522847 20.5522847,21 20,21 L4,21 C3.44771525,21 3,20.5522847 3,20 L3,4 C3,3.44771525 3.44771525,3 4,3 L16.5857864,3 C16.8510029,3 17.1053568,3.10535684 17.2928932,3.29289322 Z" />{" "}
+        <rect width="10" height="8" x="7" y="13" />{" "}
+        <rect width="8" height="5" x="8" y="3" />{" "}
+      </svg>
+    ),
+    execute: async () => {
+      onSave();
+    },
+  };
+}
+
+function toggleMermaidCommand(
+  showMermaid: boolean,
+  setShowMermaid: (showMermaid: boolean) => void
+): commands.ICommand {
+  return {
+    name: "start game",
+    keyCommand: "startGame",
+    buttonProps: { "aria-label": "Start Game" },
+    icon: (
+      <svg
+        fill="#000000"
+        height="13px"
+        width="13px"
+        version="1.1"
+        id="Capa_1"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 60 60"
+      >
+        <path
+          d="M53,41V29H31V19h7V3H22v16h7v10H7v12H0v16h16V41H9V31h20v10h-7v16h16V41h-7V31h20v10h-7v16h16V41H53z M24,5h12v12H24V5z
+      M14,55H2V43h12V55z M36,55H24V43h12V55z M58,55H46V43h12V55z"
+        />
+      </svg>
+    ),
+    execute: async () => {
+      setShowMermaid(!showMermaid);
+    },
+  };
+}
+
+export function Markdown(props: Props) {
+  const { story, updateStory } = props;
   const [markdown, setMarkdown] = useState(story?.markdown ?? "");
+  const [showMermaid, setShowMermaid] = useState(false);
 
   const fileUpload = useCallback(
     async (file: File) => {
@@ -164,10 +259,13 @@ export function Markdown({ story, updateStory }: Props) {
   if (!story) {
     return <div>Loading...</div>;
   }
+
+  const height = window.innerHeight - 200;
+
   return (
     <div>
       <MDEditor
-        height={window.innerHeight - 200}
+        height={height}
         value={markdown}
         commands={[
           commands.link,
@@ -175,7 +273,13 @@ export function Markdown({ story, updateStory }: Props) {
           commands.code,
           commands.codeBlock,
           commands.comment,
-          chatgptCommand(story),
+          chatgptCommand(props),
+          saveCommand(onSave),
+          startGameCommand(props),
+        ]}
+        extraCommands={[
+          toggleMermaidCommand(showMermaid, setShowMermaid),
+          ...getExtraCommands(),
         ]}
         onChange={(value) => setMarkdown(value ?? "")}
         onPaste={async (event) => {
@@ -186,13 +290,15 @@ export function Markdown({ story, updateStory }: Props) {
         }}
         previewOptions={{
           components: {
+            // ...(showMermaid ? { code: (props) => Code(props, story) } : {}),
+            // code: (props) => Code(props),
             code: Code,
           },
+          allowedElements: showMermaid
+            ? ["pre", "code", "style", "svg", "path", "rect", "g", "marker"]
+            : undefined,
         }}
       />
-      <button className="button" onClick={() => onSave()}>
-        Save
-      </button>
     </div>
   );
 }

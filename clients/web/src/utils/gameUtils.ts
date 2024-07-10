@@ -15,8 +15,11 @@ export function parseChapter(
   let newState: FlattenState = flatten(state) as FlattenState;
   const renderParts = [];
   for (const part of chapter.parts) {
-    if (["image", "paragraph", "choice"].includes(part.type)) {
+    if (["image", "choice"].includes(part.type)) {
       renderParts.push(part);
+    } else if (["paragraph"].includes(part.type)) {
+      const withState = replaceWithState(part.text ?? "", newState);
+      renderParts.push({ ...part, text: withState });
     } else if (part.type === "navigation") {
       renderParts.push(part);
       break;
@@ -28,7 +31,8 @@ export function parseChapter(
 
       for (const codePart of codeParts ?? []) {
         if (codePart.type === "paragraph") {
-          renderParts.push(codePart);
+          const withState = replaceWithState(codePart.text, newState);
+          renderParts.push({ ...codePart, text: withState });
         } else if (codePart.type === "navigation") {
           renderParts.push(codePart);
           break;
@@ -58,9 +62,10 @@ export function evaluateAction(
   };
   withMissingKeys;
   const texts: string[] = [];
+  const actionFlatState = flatten(action.state) as FlattenState;
 
   const newValues = Object.fromEntries(
-    Object.entries(action.state).map(([key, value]) => {
+    Object.entries(actionFlatState).map(([key, value]) => {
       const oldValue = flattenState[key];
       const { value: newValue, rolls } = evaluateActionValue(
         key,
@@ -113,6 +118,14 @@ function evaluateActionValue(
   const noSpace = withState.replaceAll(" ", "");
   const withRolledDices = rollDices(noSpace);
   const newValue = evaluateValue(withRolledDices.value) ?? oldValue;
+  // console.log("evaluateActionValue", {
+  //   oldValue,
+  //   withoutPrefix,
+  //   withState,
+  //   noSpace,
+  //   withRolledDices,
+  //   newValue,
+  // });
   return {
     value: newValue,
     ...(withRolledDices ? { rolls: withRolledDices.rolls } : {}),
