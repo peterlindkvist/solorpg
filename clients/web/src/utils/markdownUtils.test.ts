@@ -272,8 +272,9 @@ describe("markdownUtils", () => {
             },
           ],
         };
-        const toEqual = "`[d6]<4 {`\n\ntext\n\n`}`\n\n";
+        const toEqual = "`[d6]<4 {`\n\ntext\n\n\n`}`\n\n";
         const markdown = partsToMarkdown([part]);
+
         expect(markdown).toEqual(toEqual);
       });
       test("with action", () => {
@@ -292,7 +293,7 @@ describe("markdownUtils", () => {
           "`[d6]<4 {`\n\n" +
           "```json\n" +
           JSON.stringify(state, undefined, 2) +
-          "\n```\n\n`}`\n\n";
+          "\n```\n\n\n`}`\n\n";
         const markdown = partsToMarkdown([part]);
         expect(markdown).toEqual(toEqual);
       });

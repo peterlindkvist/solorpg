@@ -3,6 +3,7 @@ import { Action, Condition } from "../types";
 import {
   evaluateAction,
   evaluateCondition,
+  flatState,
   replaceWithState,
 } from "./gameUtils";
 
@@ -11,14 +12,14 @@ describe("gameUtils", () => {
     test("replaceWithState", () => {
       expect(replaceWithState("text", {})).toBe("text");
       expect(
-        replaceWithState("$strength d6", { strength: 4, agility: 3 })
+        replaceWithState("{strength} d6", { strength: 4, agility: 3 })
       ).toBe("4 d6");
-      expect(replaceWithState("$a + $a + $b", { a: 2, b: 3 })).toBe(
+      expect(replaceWithState("{a} + {a} + {b}", { a: 2, b: 3 })).toBe(
         "2 + 2 + 3"
       );
     });
   });
-  describe.only("evaluateCondition", () => {
+  describe("evaluateCondition", () => {
     test("with dice", () => {
       const condition: Condition = {
         type: "condition",
@@ -31,24 +32,24 @@ describe("gameUtils", () => {
     test("with variable", () => {
       const condition: Condition = {
         type: "condition",
-        condition: "$strength >= 12",
+        condition: "{strength} >= 12",
       };
       const { isTrue, renderPart } = evaluateCondition(condition, {
         strength: 14,
       });
-      expect(renderPart.text).toEqual("$strength >= 12 -> 14>=12 -> true");
+      expect(renderPart.text).toEqual("{strength} >= 12 -> 14>=12 -> true");
       expect(isTrue).toBe(true);
     });
     test("with variable and dice", () => {
       const condition: Condition = {
         type: "condition",
-        condition: "$strength <= [2d1+20]",
+        condition: "{strength} <= [2d1+20]",
       };
       const { isTrue, renderPart } = evaluateCondition(condition, {
         strength: 14,
       });
       expect(renderPart.text).toEqual(
-        "$strength <= [2d1+20] -> 14<=22 -> true"
+        "{strength} <= [2d1+20] -> 14<=22 -> true"
       );
       expect(isTrue).toBe(true);
     });
@@ -63,7 +64,7 @@ describe("gameUtils", () => {
       };
       const { state, renderPart } = evaluateAction(action, {});
       expect(state).toEqual({ rope: 1 });
-      expect(renderPart.text).toEqual("rope: 0 -> 1");
+      expect(renderPart.text).toEqual("rope: 1");
     });
 
     test("simple increase action", () => {
@@ -101,16 +102,14 @@ describe("gameUtils", () => {
       };
       const { state, renderPart } = evaluateAction(action, { egg: 3, milk: 1 });
       expect(state).toEqual({ pancakes: 1, egg: 2, milk: 0 });
-      expect(renderPart.text).toEqual(
-        "pancakes: 0 -> 1, egg: 3 -> 2, milk: 1 -> 0"
-      );
+      expect(renderPart.text).toEqual("pancakes: 1, egg: 3 -> 2, milk: 1 -> 0");
     });
 
     test("evaluate calculation states", () => {
       const action: Action = {
         type: "action",
         state: {
-          cupper: "$gold * 100 + $silver * 10 + $cupper",
+          cupper: "{gold} * 100 + {silver} * 10 + {cupper}",
           gold: 0,
           silver: 0,
         },
@@ -136,7 +135,68 @@ describe("gameUtils", () => {
       const { state, renderPart } = evaluateAction(action, {});
 
       expect(state.rolld6).toBe(1);
-      expect(renderPart.text).toEqual("rolld6: 0 -[1]-> 1");
+      expect(renderPart.text).toEqual("rolld6: [1]-> 1");
+    });
+
+    test("evaluate with object table", () => {
+      const action: Action = {
+        type: "action",
+        state: {
+          fruit: "{fruits.2}",
+        },
+      };
+      const flattenState = flatState({
+        fruits: {
+          "1": "apple",
+          "2": "banana",
+        },
+      });
+
+      const { state, renderPart } = evaluateAction(action, flattenState);
+
+      expect(state.fruit).toBe("banana");
+      expect(renderPart.text).toEqual("fruit: banana");
+    });
+
+    test("evaluate with object table and dice", () => {
+      const action: Action = {
+        type: "action",
+        state: {
+          fruit: "{fruits.[d1]}",
+        },
+      };
+      const flattenState = flatState({
+        fruits: {
+          "1": "apple",
+          "2": "banana",
+        },
+      });
+
+      const { state, renderPart } = evaluateAction(action, flattenState);
+
+      expect(state.fruit).toBe("apple");
+      expect(renderPart.text).toEqual("fruit: [1]-> apple");
+    });
+
+    test.only("evaluate with object table and variable", () => {
+      const action: Action = {
+        type: "action",
+        state: {
+          fruit: "{fruits.{rolld6}}",
+        },
+      };
+      const flattenState = flatState({
+        rolld6: "[d1]",
+        fruits: {
+          "1": "apple",
+          "2": "banana",
+        },
+      });
+
+      const { state, renderPart } = evaluateAction(action, flattenState);
+
+      expect(state.fruit).toBe("apple");
+      expect(renderPart.text).toEqual("fruit: [1]-> apple");
     });
   });
 });

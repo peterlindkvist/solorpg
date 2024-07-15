@@ -12,7 +12,7 @@ export function parseChapter(
   parts: Part[];
   newState: State;
 } {
-  let newState: FlattenState = flatten(state) as FlattenState;
+  let newState = flatState(state);
   const renderParts = [];
   for (const part of chapter.parts) {
     if (["image", "choice"].includes(part.type)) {
@@ -62,7 +62,7 @@ export function evaluateAction(
   };
   withMissingKeys;
   const texts: string[] = [];
-  const actionFlatState = flatten(action.state) as FlattenState;
+  const actionFlatState = flatState(action.state);
 
   const newValues = Object.fromEntries(
     Object.entries(actionFlatState).map(([key, value]) => {
@@ -73,16 +73,17 @@ export function evaluateAction(
         withMissingKeys
       );
       if (oldValue !== newValue) {
-        let text = oldValue ? `${oldValue} -` : "";
-        text = `${text}${rolls ? `${rolls}` : ""}`;
-        text = `${text}${oldValue || rolls ? "->" : ""}`;
-        text = `${text} ${newValue}`;
-        console.log("text", { oldValue, newValue });
-        texts.push(`${key}: ${text}`);
+        if (oldValue === undefined) {
+          const arrow = rolls ? `${rolls}-> ` : "";
+          const text = `${arrow}${newValue}`;
+          texts.push(`${key}: ${text}`);
+        } else {
+          const arrow = rolls ? `-${rolls}->` : "->";
+          const text = `${oldValue} ${arrow} ${newValue}`;
+          texts.push(`${key}: ${text}`);
+        }
       }
 
-      // const start = oldValue ? `${oldValue} -` : "";
-      // const arrow = rolls ? `${rolls}->` : "->";
       return [key, newValue];
     })
   );
@@ -118,6 +119,8 @@ function evaluateActionValue(
   const noSpace = withState.replaceAll(" ", "");
   const withRolledDices = rollDices(noSpace);
   const newValue = evaluateValue(withRolledDices.value) ?? oldValue;
+  const withState2 = replaceWithState(`${newValue}`, state);
+
   // console.log("evaluateActionValue", {
   //   oldValue,
   //   withoutPrefix,
@@ -127,7 +130,7 @@ function evaluateActionValue(
   //   newValue,
   // });
   return {
-    value: newValue,
+    value: withState2,
     ...(withRolledDices ? { rolls: withRolledDices.rolls } : {}),
   };
 }
@@ -137,10 +140,10 @@ function replacePrefix(key: string, value: string | number): string {
     return value.toString();
   } else {
     if (value.startsWith("+=")) {
-      return `$${key} + ${value.slice(2)}`;
+      return `{${key}} + ${value.slice(2)}`;
     }
     if (value.startsWith("-=")) {
-      return `$${key} - (${value.slice(2)})`;
+      return `{${key}} - (${value.slice(2)})`;
     }
     return value;
   }
@@ -149,7 +152,7 @@ function replacePrefix(key: string, value: string | number): string {
 export function replaceWithState(text: string, state: FlattenState): string {
   let ret = text;
   for (const [key, value] of Object.entries(state)) {
-    ret = ret.replaceAll(`$${key}`, value.toString());
+    ret = ret.replaceAll(`{${key}}`, value.toString());
   }
   return ret;
 }
@@ -178,13 +181,17 @@ function rollDices(value: string): { value: string; rolls?: string } {
 export function updateState(action: Action, state: State): State {
   const flattenState = flatten(state) as FlattenState;
 
-  const newValues = Object.fromEntries(
+  const newValues: FlattenState = Object.fromEntries(
     Object.entries(action.state).map(([key, value]) => {
-      const newValue = evaluateValue(value);
-      return [key, newValue];
+      if (typeof value === "number" || typeof value === "string") {
+        const newValue = evaluateValue(value);
+        return [key, newValue];
+      } else {
+        return [key, value];
+      }
     })
   );
-  return unflatten({ ...flattenState, ...newValues }) as State;
+  return unFlatState({ ...flattenState, ...newValues });
 }
 
 function evaluateValue(value: string | number): string | number | undefined {
@@ -197,7 +204,14 @@ function evaluateValue(value: string | number): string | number | undefined {
     }
     return value;
   } catch (e) {
-    console.error("Error parsing value", { value });
     return value;
   }
+}
+
+export function flatState(state: State): FlattenState {
+  return flatten(state) as FlattenState;
+}
+
+export function unFlatState(state: Partial<FlattenState>): State {
+  return unflatten(state) as State;
 }

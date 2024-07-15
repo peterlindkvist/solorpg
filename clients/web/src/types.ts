@@ -85,7 +85,10 @@ export type Theme = {
   backgroundColor: string;
 };
 
-export type State = Record<string, string | number>;
+export type State = Record<
+  string,
+  string | number | Record<string, string | number>
+>;
 
 export type Story = {
   id: string;
