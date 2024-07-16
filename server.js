@@ -83,7 +83,7 @@ async function solorpg(req, res) {
   }
 
   if (req.path.startsWith("/api/speech") && req.method === "POST") {
-    const { text, storyId, narrator } = req.query;
+    const { text, storyId, narrator = "nova" } = req.query;
     console.log("text", text, narrator);
     const ret = await textToSpeech(text, narrator);
     const file = await uploadFileToStorage(

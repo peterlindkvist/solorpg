@@ -11,6 +11,7 @@ export function parseChapter(
 ): {
   parts: Part[];
   newState: State;
+  narratorText: string;
 } {
   let newState = flatState(state);
   const renderParts = [];
@@ -49,7 +50,27 @@ export function parseChapter(
     }
   }
 
-  return { parts: renderParts, newState: unflatten(newState) as State };
+  return {
+    parts: renderParts,
+    newState: unFlatState(newState),
+    narratorText: getNarratorText(renderParts),
+  };
+}
+
+export function getNarratorText(parts: Part[]): string {
+  return parts
+    .map((part) => {
+      if (part.type === "paragraph") {
+        return part.text;
+        // } else if (part.type === "action") {
+        //   return part.text;
+        // } else if (part.type === "condition") {
+        //   return part.text;
+      } else {
+        return "";
+      }
+    })
+    .join(" ");
 }
 
 export function evaluateAction(
@@ -152,7 +173,9 @@ function replacePrefix(key: string, value: string | number): string {
 export function replaceWithState(text: string, state: FlattenState): string {
   let ret = text;
   for (const [key, value] of Object.entries(state)) {
-    ret = ret.replaceAll(`{${key}}`, value.toString());
+    if (value ?? false) {
+      ret = ret.replaceAll(`{${key}}`, value.toString());
+    }
   }
   return ret;
 }

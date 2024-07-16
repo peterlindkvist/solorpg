@@ -5,7 +5,7 @@ import MDEditor, {
   getExtraCommands,
   selectWord,
 } from "@uiw/react-md-editor";
-import { onImagePasted } from "./markdown/editorUtils";
+import { onImagePasted, randomid } from "./markdown/editorUtils";
 import * as api from "../utils/api";
 import { Page, Story } from "../types";
 import * as soloapi from "../utils/api";
@@ -21,8 +21,6 @@ type Props = {
 
 mermaid.initialize({ securityLevel: "loose" });
 
-// https://github.com/uiwjs/react-md-editor?tab=readme-ov-file#support-custom-mermaid-preview
-const randomid = () => parseInt(String(Math.random() * 1e15), 10).toString(36);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Code = (props: any) => {
   const demoid = useRef(`dome${randomid()}`);

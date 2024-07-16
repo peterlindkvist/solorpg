@@ -54,7 +54,7 @@ export function textToImage(query: {
 export function textToSpeech(query: {
   storyId: string;
   text: string;
-  narrator: string;
+  narrator?: string;
 }): Promise<{ url: string }> {
   const queryString = new URLSearchParams(query).toString();
 

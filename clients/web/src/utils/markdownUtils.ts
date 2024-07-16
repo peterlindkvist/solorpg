@@ -45,8 +45,9 @@ function parseNavigation(code: Token): Part | undefined {
 }
 
 function parseActionPart(content: string): Action {
+  const noErrorMessages = content.replace(/\nJSON5:.*/g, "");
   try {
-    const state = json5.parse(content);
+    const state = json5.parse(noErrorMessages);
     return {
       type: "action",
       state,
@@ -55,7 +56,7 @@ function parseActionPart(content: string): Action {
     const error = e instanceof Error ? e : new Error("unknown error");
     return {
       type: "action",
-      markdown: content,
+      markdown: noErrorMessages,
       state: {},
       error: error.message,
     };
@@ -261,7 +262,11 @@ function chapterToMarkdown(chapter: Chapter): string {
   return ret;
 }
 
-export function partsToMarkdown(parts: Part[], settings?: Settings): string {
+export function partsToMarkdown(
+  parts: Part[],
+  chapterSettings?: Settings
+): string {
+  let firstAction = true;
   return parts
     .map((part) => {
       switch (part.type) {
@@ -277,7 +282,9 @@ export function partsToMarkdown(parts: Part[], settings?: Settings): string {
           return conditionToMarkdown(part) + "\n\n";
         case "navigation":
           return `\`->[${part.text}](${part.target})\`\n\n`;
-        case "action":
+        case "action": {
+          const settings = firstAction ? chapterSettings : undefined;
+          firstAction = false;
           return (
             "```json\n" +
             (part.markdown
@@ -285,6 +292,7 @@ export function partsToMarkdown(parts: Part[], settings?: Settings): string {
               : JSON.stringify({ ...settings, ...part.state }, undefined, 2)) +
             "\n```\n\n"
           );
+        }
       }
     })
     .join("");

@@ -21,22 +21,24 @@ export function Game(props: Props) {
   const [chapter, setChapter] = useState<Chapter>();
   const [renderParts, setRenderParts] = useState<Array<Part>>([]);
   const [isRecording, setIsRecording] = useState(false);
-  const [voice, setVoice] = useState(false);
-  const [sound, setSound] = useState(false);
+  const [useUserVoice, setUseUserVoice] = useState(false);
+  const [useNarrator, setUseNarrator] = useState(true);
+  // const [narratorUrl, setNarratorFile] = useState<string>();
+  const [isLoadingNarrator, setIsLoadingNarrator] = useState(false);
   const [state, setState] = useState<State>();
 
   const { startRecording, stopRecording } = useReactMediaRecorder({
-    audio: voice,
+    audio: useUserVoice,
     video: false,
     askPermissionOnMount: true,
     onStop: (_blobUrl, blob) => {
-      if (voice) {
-        analyseText(blob);
+      if (useUserVoice) {
+        analyseUserVoice(blob);
       }
     },
   });
 
-  const recordVoice = useCallback(() => {
+  const recordUserVoice = useCallback(() => {
     console.log("recordVoice start");
     setIsRecording(true);
     startRecording();
@@ -47,8 +49,8 @@ export function Game(props: Props) {
     }, 3000);
   }, [startRecording, stopRecording]);
 
-  const toggleVoice = useCallback(() => {
-    if (voice) {
+  const toggleUserVoice = useCallback(() => {
+    if (useUserVoice) {
       console.log("stopVoice");
       if (recordInterval) {
         clearTimeout(recordInterval);
@@ -56,10 +58,10 @@ export function Game(props: Props) {
       stopRecording();
       setIsRecording(false);
     }
-    setVoice(!voice);
-  }, [stopRecording, voice]);
+    setUseUserVoice(!useUserVoice);
+  }, [stopRecording, useUserVoice]);
 
-  const analyseText = useCallback(
+  const analyseUserVoice = useCallback(
     async (blob: Blob) => {
       const ret = await api.speechToText(blob, { storyId: story?.id ?? "" });
       const spokenText = ret.text.toLowerCase();
@@ -70,10 +72,10 @@ export function Game(props: Props) {
       if (found) {
         setChapter(story?.chapters.find((c) => c.id === found.target));
       } else {
-        recordVoice();
+        recordUserVoice();
       }
     },
-    [story, chapter, recordVoice]
+    [story, chapter, recordUserVoice]
   );
 
   const setHash = useCallback((chapterId: string, state: State = {}) => {
@@ -86,16 +88,46 @@ export function Game(props: Props) {
       if (chapterId && chapterId !== chapter?.id) {
         const newChapter = story?.chapters.find((c) => c.id === chapterId);
         if (newChapter) {
-          const { parts, newState } = parseChapter(newChapter, oldState);
+          const { parts, newState, narratorText } = parseChapter(
+            newChapter,
+            oldState
+          );
           setRenderParts(parts);
           setState(newState);
           setChapter(newChapter);
+          if (useNarrator && story) {
+            setIsLoadingNarrator(true);
+            isLoadingNarrator;
+            const T2S = window.speechSynthesis || speechSynthesis;
+            const utter = new SpeechSynthesisUtterance(narratorText);
+            utter.volume = 1;
+            const voices = T2S.getVoices();
+            const voice =
+              voices.find((v) => v.lang === "sv-SE") ??
+              voices.find((v) => v.lang === "en-US");
+            console.log("utter", narratorText, utter);
+            if (voice) {
+              utter.lang = voice?.lang;
+              utter.voice = voice;
+            }
+            T2S.speak(utter);
+            setIsLoadingNarrator(false);
+            // const query = {
+            //   storyId: story.id,
+            //   text: narratorText,
+            //   narrator: story.settings.assistant?.narrator,
+            // };
+            // api.textToSpeech(query).then((res) => {
+            //   console.log("narrator", res);
+            //   setNarratorFile(res.url);
+            // });
+          }
         } else {
           console.error("chapter not found", chapterId);
         }
       }
     },
-    [story, chapter]
+    [story, chapter, useNarrator]
   );
 
   const navigateToChapter = useCallback(
@@ -143,10 +175,10 @@ export function Game(props: Props) {
     >
       <Header
         exit={props.exit}
-        setSound={setSound}
-        toggleVoice={toggleVoice}
-        sound={sound}
-        voice={voice}
+        setSound={setUseNarrator}
+        toggleVoice={toggleUserVoice}
+        sound={useNarrator}
+        voice={useUserVoice}
       />
 
       <div className="game-text">
@@ -171,12 +203,12 @@ export function Game(props: Props) {
           }
         })}
       </div>
-      {/* {sound && chapter?.state?.voiceUrl && (
+      {/* {useNarrator && narratorUrl && (
         <audio
-          src={chapter.state?.voiceUrl}
+          src={narratorUrl}
           controls
           autoPlay
-          onEnded={() => voice && recordVoice()}
+          onEnded={() => useUserVoice && recordUserVoice()}
         />
       )} */}
     </div>

@@ -47,3 +47,8 @@ export function insertToTextArea(insertString: string) {
 
   return sentence;
 }
+
+// https://github.com/uiwjs/react-md-editor?tab=readme-ov-file#support-custom-mermaid-preview
+export function randomid() {
+  return parseInt(String(Math.random() * 1e15), 10).toString(36);
+}
