@@ -76,6 +76,7 @@ function chatgptCommand({ story }: Props): commands.ICommand {
     name: "ChatGPT",
     keyCommand: "chatgpt",
     buttonProps: { "aria-label": "Insert ChatGPT text" },
+
     icon: (
       <svg width="15" height="15" viewBox="0 0 1081.86 818.92">
         <path
@@ -102,9 +103,6 @@ function chatgptCommand({ story }: Props): commands.ICommand {
       </svg>
     ),
     execute: async (state, api) => {
-      if (!story.settings.assistant) {
-        return;
-      }
       const newSelectionRange = selectWord({
         text: state.text,
         selection: state.selection,
@@ -113,8 +111,16 @@ function chatgptCommand({ story }: Props): commands.ICommand {
       const state1 = api.setSelectionRange(newSelectionRange);
       const selectedText = state1.selectedText;
 
+      if (!story.settings.assistant) {
+        api.replaceSelection(
+          `To be able to use assistant, please enable it in the story settings. \n ${selectedText}`
+        );
+        return;
+      }
+
       let newText = selectedText;
       const imageMatch = selectedText.match(/!\[(.*)\]\(.*\)/);
+      console.log("imageMatch", imageMatch);
       if (imageMatch) {
         const description = imageMatch[1];
         const image = await soloapi.textToImage({
@@ -122,8 +128,8 @@ function chatgptCommand({ story }: Props): commands.ICommand {
           description,
           context: story.settings.assistant.imageContext,
         });
-        // newText = `![${description}](${image.url})`;
-        newText = `![${image.text}](${image.url})`;
+        const comment = `<!--- ${image.text} -->`;
+        newText = `${comment}\n![${description}](${image.url})`;
       } else {
         const text = await soloapi.textToText({
           text: selectedText,
@@ -246,6 +252,7 @@ export function Markdown(props: Props) {
 
   const onSave = useCallback(() => {
     const updatedStory = markdownToStory(markdown, story?.id ?? "");
+    console.log("updatedStory", updatedStory);
     setMarkdown(storyToMarkdown(updatedStory));
     updateStory(updatedStory);
   }, [story, updateStory, markdown]);

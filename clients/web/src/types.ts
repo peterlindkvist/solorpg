@@ -17,6 +17,7 @@ export type Image = {
   type: "image";
   url?: string;
   text: string;
+  description?: string;
 };
 
 export type Paragraph = {
