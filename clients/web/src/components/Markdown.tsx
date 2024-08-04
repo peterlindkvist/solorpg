@@ -9,7 +9,7 @@ import { onImagePasted, randomid } from "./markdown/editorUtils";
 import * as api from "../utils/api";
 import { Page, Story } from "../types";
 import * as soloapi from "../utils/api";
-import { markdownToStory, storyToMarkdown } from "../utils/markdownUtils";
+import { parseMarkdown, storyToMarkdown } from "../utils/markdownUtils";
 import { getCodeString } from "rehype-rewrite";
 import mermaid from "mermaid";
 
@@ -251,7 +251,7 @@ export function Markdown(props: Props) {
   );
 
   const onSave = useCallback(() => {
-    const updatedStory = markdownToStory(markdown, story?.id ?? "");
+    const updatedStory = parseMarkdown(markdown);
     console.log("updatedStory", updatedStory);
     setMarkdown(storyToMarkdown(updatedStory));
     updateStory(updatedStory);

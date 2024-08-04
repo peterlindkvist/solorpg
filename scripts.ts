@@ -38,9 +38,9 @@ async function fetchImages() {
 
 function parseMarkdown() {
   const content = fs.readFileSync("./assets/grotta/story.md", "utf8");
-  const chapters = markdownParser.parseMarkdown(content);
-  const images = markdownParser.findImages(chapters);
-  const imageState = chapters.find((chapter) => chapter.state)?.state?.images;
+  const sections = markdownParser.parseMarkdown(content);
+  const images = markdownParser.findImages(sections);
+  const imageState = sections.find((section) => section.state)?.state?.images;
   const imageDescriptions = images
     .map((image) => image?.text)
     .filter(Boolean) as string[];

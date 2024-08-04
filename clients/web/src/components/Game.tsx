@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Chapter, Choice, Part, State, Story } from "../types";
+import { Section, Choice, Part, State, Story } from "../types";
 import { useReactMediaRecorder } from "react-media-recorder";
 import * as api from "../utils/api";
 
 import "./Game.css";
 import { ImagePart } from "./game/ImagePart";
 import { ButtonPart } from "./game/ButtonPart";
-import { parseChapter } from "../utils/gameUtils";
+import { parseSection } from "../utils/gameUtils";
 import { Header } from "./game/Header";
 
 type Props = {
@@ -18,7 +18,7 @@ let recordInterval: NodeJS.Timeout | undefined;
 
 export function Game(props: Props) {
   const [story, setStory] = useState<Story>();
-  const [chapter, setChapter] = useState<Chapter>();
+  const [section, setSection] = useState<Section>();
   const [renderParts, setRenderParts] = useState<Array<Part>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [useUserVoice, setUseUserVoice] = useState(false);
@@ -66,35 +66,35 @@ export function Game(props: Props) {
       const ret = await api.speechToText(blob, { storyId: story?.id ?? "" });
       const spokenText = ret.text.toLowerCase();
       const choices: Choice[] =
-        (chapter?.parts.filter((p) => p.type === "choice") as Choice[]) ?? [];
+        (section?.parts.filter((p) => p.type === "choice") as Choice[]) ?? [];
       const found = choices.find((c) => spokenText.includes(c.key));
 
       if (found) {
-        setChapter(story?.chapters.find((c) => c.id === found.target));
+        setSection(story?.sections.find((c) => c.id === found.target));
       } else {
         recordUserVoice();
       }
     },
-    [story, chapter, recordUserVoice]
+    [story, section, recordUserVoice]
   );
 
-  const setHash = useCallback((chapterId: string, state: State = {}) => {
-    const hash = chapterId + "?state=" + btoa(JSON.stringify(state));
+  const setHash = useCallback((sectionId: string, state: State = {}) => {
+    const hash = sectionId + "?state=" + btoa(JSON.stringify(state));
     window.location.hash = hash;
   }, []);
 
-  const setNewChapter = useCallback(
-    (chapterId: string, oldState: State) => {
-      if (chapterId && chapterId !== chapter?.id) {
-        const newChapter = story?.chapters.find((c) => c.id === chapterId);
-        if (newChapter) {
-          const { parts, newState, narratorText } = parseChapter(
-            newChapter,
+  const setNewsection = useCallback(
+    (sectionId: string, oldState: State) => {
+      if (sectionId && sectionId !== section?.id) {
+        const newsection = story?.sections.find((c) => c.id === sectionId);
+        if (newsection) {
+          const { parts, newState, narratorText } = parseSection(
+            newsection,
             oldState
           );
           setRenderParts(parts);
           setState(newState);
-          setChapter(newChapter);
+          setSection(newsection);
           if (useNarrator && story) {
             setIsLoadingNarrator(true);
             isLoadingNarrator;
@@ -123,18 +123,18 @@ export function Game(props: Props) {
             // });
           }
         } else {
-          console.error("chapter not found", chapterId);
+          console.error("section not found", sectionId);
         }
       }
     },
-    [story, chapter, useNarrator]
+    [story, section, useNarrator]
   );
 
-  const navigateToChapter = useCallback(
+  const navigateTosection = useCallback(
     (id: string) => {
-      const chapterId = id.replace(/^#/, "");
-      const nextChapter = story?.chapters.find((c) => c.id === chapterId);
-      if (nextChapter) {
+      const sectionId = id.replace(/^#/, "");
+      const nextsection = story?.sections.find((c) => c.id === sectionId);
+      if (nextsection) {
         setHash(id, state);
       }
     },
@@ -142,11 +142,11 @@ export function Game(props: Props) {
   );
 
   const hashChangeHandler = useCallback(() => {
-    const [chapterId, stateJSON] = window.location.hash
+    const [sectionId, stateJSON] = window.location.hash
       .substring(1)
       .split("?state=");
-    setNewChapter(chapterId, stateJSON ? JSON.parse(atob(stateJSON)) : {});
-  }, [setNewChapter]);
+    setNewsection(sectionId, stateJSON ? JSON.parse(atob(stateJSON)) : {});
+  }, [setNewsection]);
 
   useEffect(() => {
     window.addEventListener("hashchange", hashChangeHandler);
@@ -161,11 +161,11 @@ export function Game(props: Props) {
     setStory(props.story);
   }
 
-  const chapterId = window.location.hash.substring(1);
-  if (!chapterId && props?.story?.chapters[0]?.id) {
-    const chapter = props.story?.chapters[0]?.id;
+  const sectionId = window.location.hash.substring(1);
+  if (!sectionId && props?.story?.sections[0]?.id) {
+    const section = props.story?.sections[0]?.id;
     const state = props.story?.state;
-    setHash(chapter, state);
+    setHash(section, state);
   }
 
   return (
@@ -181,18 +181,23 @@ export function Game(props: Props) {
         voice={useUserVoice}
       />
 
-      <div className="game-text">
+      <div className="game-section">
+        <h2>{section?.heading}</h2>
         {renderParts.map((part, i) => {
           if (part.type === "image") {
             return <ImagePart key={i} part={part} />;
           }
           if (part.type === "choice" || part.type === "navigation") {
             return (
-              <ButtonPart key={i} part={part} onClick={navigateToChapter} />
+              <ButtonPart key={i} part={part} onClick={navigateTosection} />
             );
           }
           if (part.type === "paragraph") {
-            return <p key={i}>{part.text}</p>;
+            return (
+              <p className="game-text" key={i}>
+                {part.text}
+              </p>
+            );
           }
           if (part.type === "action" || part.type === "condition") {
             return (

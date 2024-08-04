@@ -1,12 +1,12 @@
 import { flatten, unflatten } from "safe-flat";
 import { Parser } from "expr-eval";
-import { Action, Chapter, Condition, Part, State } from "../types";
+import { Action, Section, Condition, Part, State } from "../types";
 import { DiceRoll } from "@dice-roller/rpg-dice-roller";
 
 type FlattenState = Record<string, string | number>;
 
-export function parseChapter(
-  chapter: Chapter,
+export function parseSection(
+  section: Section,
   state: State
 ): {
   parts: Part[];
@@ -15,7 +15,7 @@ export function parseChapter(
 } {
   let newState = flatState(state);
   const renderParts = [];
-  for (const part of chapter.parts) {
+  for (const part of section.parts) {
     if (["image", "choice"].includes(part.type)) {
       renderParts.push(part);
     } else if (["paragraph"].includes(part.type)) {

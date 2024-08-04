@@ -7,8 +7,8 @@ describe("markdownUtils", () => {
     describe("Header", () => {
       test("empty", () => {
         const markdown = "# Header";
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -20,8 +20,8 @@ describe("markdownUtils", () => {
     describe("Paragraph", () => {
       test("paragraph", () => {
         const markdown = `# Header\ntext`;
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -38,8 +38,8 @@ describe("markdownUtils", () => {
     describe("Image", () => {
       test("image", () => {
         const markdown = `# Header\n![imagetext](url)`;
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -58,8 +58,8 @@ describe("markdownUtils", () => {
       test("Error", () => {
         const codeMarker = "```";
         const markdown = `# Header\n${codeMarker}\n{faulty}}\n${codeMarker}`;
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -77,8 +77,8 @@ describe("markdownUtils", () => {
       test("JSON", () => {
         const codeMarker = "```";
         const markdown = `# Header\n${codeMarker}\n{"test": 1}\n${codeMarker}`;
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -94,8 +94,8 @@ describe("markdownUtils", () => {
       test("JSON", () => {
         const codeMarker = "```";
         const markdown = `# Header\n${codeMarker}json\n{"test": 1}\n${codeMarker}`;
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -111,8 +111,8 @@ describe("markdownUtils", () => {
       test("JSON5", () => {
         const codeMarker = "```";
         const markdown = `# Header\n${codeMarker}\n{test: 1, // comment \n}\n${codeMarker}`;
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -129,8 +129,8 @@ describe("markdownUtils", () => {
     describe("Code", () => {
       test("navigation", () => {
         const markdown = "# Header\n `->[text](target)`";
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -147,8 +147,8 @@ describe("markdownUtils", () => {
       test("condition one text", () => {
         const codeMarkdown = "`1=1 {`\n text\n `}`";
         const markdown = `# Header\n ${codeMarkdown}`;
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -164,8 +164,8 @@ describe("markdownUtils", () => {
       });
       test("condition state", () => {
         const markdown = "# Header\n `1<2 {`\n ```\n{a:1}\n```\n`}`";
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -187,8 +187,8 @@ describe("markdownUtils", () => {
 
       test("condition state", () => {
         const markdown = "# Header\n `1=1{`\n text2\n ```\n{a:1}\n```\n`}`";
-        const chapters = parseMarkdown(markdown);
-        expect(chapters).toEqual([
+        const sections = parseMarkdown(markdown);
+        expect(sections).toEqual([
           {
             heading: "Header",
             id: "header",

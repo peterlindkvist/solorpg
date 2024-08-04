@@ -1,4 +1,4 @@
-export type Chapter = {
+export type Section = {
   id?: string;
   heading?: string;
   parts: Array<Part>;
@@ -95,11 +95,11 @@ export type Story = {
   id: string;
   title: string;
   markdown: string;
-  chapters: Chapter[];
+  sections: Section[];
   images: Image[];
   state: State;
   settings: Settings;
 };
 
-export type Page = "edit" | "game" | "chapters" | "images";
+export type Page = "edit" | "game";
 export type Narrator = "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";

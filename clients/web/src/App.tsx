@@ -3,49 +3,49 @@ import "./App.css";
 import { Markdown } from "./components/Markdown";
 import * as api from "./utils/api";
 import { Page, Story } from "./types";
-import { markdownToStory, storyToMarkdown } from "./utils/markdownUtils";
+import { parseMarkdown, storyToMarkdown } from "./utils/markdownUtils";
 import { Game } from "./components/Game";
 
 function App() {
-  const [storyName, setStoryName] = useState<string>();
   const [bookName, setBookName] = useState<string>();
+  const [chapterName, setChapterName] = useState<string>();
   const [story, setStory] = useState<Story>();
   const [page, setPage] = useState<Page>("edit");
 
   const saveAndUpdateStory = useCallback(
     async (story: Story) => {
-      if (storyName === undefined || bookName === undefined) {
+      if (bookName === undefined || chapterName === undefined) {
         return;
       }
       const markdown = storyToMarkdown(story);
       story.markdown = markdown;
       console.log("story", story);
-      await api.saveStory(storyName, bookName, markdown);
+      await api.saveStory(bookName, chapterName, markdown);
       setStory(story);
     },
-    [storyName, bookName]
+    [bookName, chapterName]
   );
 
-  const fetchStory = useCallback((storyName: string, bookName: string) => {
-    setStoryName(storyName);
-    setBookName(bookName);
-    api.getStory(storyName, bookName).then((markdown) => {
-      const story = markdownToStory(markdown, storyName ?? "");
+  const fetchStory = useCallback((storyName: string, chapterName: string) => {
+    setBookName(storyName);
+    setChapterName(chapterName);
+    api.getStory(storyName, chapterName).then((markdown) => {
+      const story = parseMarkdown(markdown);
       setStory(story);
     });
   }, []);
 
-  if (!storyName) {
+  if (!bookName) {
     const url = new URL(window.location.href);
-    const [, folder, page, storyName, bookName] = url.pathname.split("/");
+    const [, folder, page, storyName, chapterName] = url.pathname.split("/");
     if (
       !storyName ||
-      !bookName ||
-      !["edit", "game", "images", "chapters"].includes(page)
+      !chapterName ||
+      !["edit", "game", "images", "sections"].includes(page)
     ) {
-      window.location.href = `${folder}/game/test/grotta`;
+      window.location.href = `${folder}/game/help/introduction`;
     } else {
-      fetchStory(storyName, bookName);
+      fetchStory(storyName, chapterName);
       setPage(page as Page);
     }
   }

@@ -3,7 +3,7 @@ import anchor from "markdown-it-anchor";
 import json5 from "json5";
 import {
   Action,
-  Chapter,
+  Section,
   Choice,
   Condition,
   Image,
@@ -108,20 +108,21 @@ function parseCode(codeData: CodeData): Condition {
   };
 }
 
-export function parseMarkdown(markdown: string): Chapter[] {
+export function parseMarkdown(markdown: string): Story {
   const tokens = md.parse(markdown, {});
 
-  console.log("tokens", tokens);
-
-  const chapters: Array<Chapter> = [];
-  let chapter: Chapter = { parts: [] };
+  const sections: Array<Section> = [];
+  let section: Section = { parts: [] };
   let inHeading = false;
-  let isFirstAction = true;
+  let isChapterDefinition = false;
+  let storyName = "";
+  let settings = {};
   const inCode: { active: boolean; parts: Part[]; token?: Token } = {
     active: false,
     parts: [],
   };
 
+  console.log("tokens", tokens);
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     let part: Part | undefined;
@@ -130,11 +131,14 @@ export function parseMarkdown(markdown: string): Chapter[] {
 
     if (token.type === "heading_open") {
       inHeading = true;
-      chapter = { parts: [] };
+      isChapterDefinition = token.tag === "h1";
+      section = { parts: [] };
     }
     if (token.type === "heading_close") {
       inHeading = false;
-      chapters.push(chapter);
+      if (!isChapterDefinition) {
+        sections.push(section);
+      }
     }
     if (token.type === "inline") {
       const image = token.children?.find((token) => token.type === "image");
@@ -185,8 +189,11 @@ export function parseMarkdown(markdown: string): Chapter[] {
         }
       } else {
         if (inHeading) {
-          chapter.heading = token.content;
-          chapter.id = encodeURIComponent(
+          if (isChapterDefinition) {
+            storyName = token.content;
+          }
+          section.heading = token.content;
+          section.id = encodeURIComponent(
             token.content.toLowerCase().replace(/ /g, "-")
           );
         } else {
@@ -211,27 +218,34 @@ export function parseMarkdown(markdown: string): Chapter[] {
     }
     if (token.type === "fence" && token.info !== "mermaid") {
       part = parseActionPart(token.content);
-      if (isFirstAction) {
-        isFirstAction = false;
-        const { title, author, theme, voiceUrl, assistant, ...state } =
+      if (isChapterDefinition) {
+        const { title, author, theme, voiceUrl, assistant } =
           part.state as State & Settings;
-        part.state = state;
 
-        chapter.settings = { title, author, theme, voiceUrl, assistant };
+        settings = { title, author, theme, voiceUrl, assistant };
       }
     }
 
-    if (part) {
-      inCode.active ? inCode.parts.push(part) : chapter.parts.push(part);
+    console.log("part", isChapterDefinition, token, part);
+    if (part && !isChapterDefinition) {
+      inCode.active ? inCode.parts.push(part) : section.parts.push(part);
     }
   }
 
-  return chapters;
+  return {
+    id: storyName ?? "",
+    title: storyName ?? "",
+    markdown: markdown,
+    sections,
+    images: findImages(sections),
+    state: {},
+    settings,
+  };
 }
 
-export function findImages(chapters: Chapter[]): Image[] {
-  const images: Array<Image> = chapters.flatMap((chapter) => {
-    const imageParts = chapter.parts.filter(
+export function findImages(sections: Section[]): Image[] {
+  const images: Array<Image> = sections.flatMap((section) => {
+    const imageParts = section.parts.filter(
       (part) => part.type === "image"
     ) as Array<Image>;
 
@@ -245,39 +259,32 @@ export function renderMarkdown(markdown: string): string {
   return md.render(markdown);
 }
 
-export function markdownToStory(markdown: string, storyName: string): Story {
-  const chapters = parseMarkdown(markdown);
-  const story: Story = {
-    id: storyName ?? "",
-    title: chapters[0]?.heading ?? "",
-    markdown: markdown,
-    chapters,
-    images: findImages(chapters),
-    state: {},
-    settings: chapters.at(0)?.settings ?? {},
-  };
-  return story;
-}
-
 export function storyToMarkdown(story: Story): string {
   const mermaid = storyToMermaid(story);
-  const chapters = story.chapters
-    .map((chapter) => chapterToMarkdown(chapter))
+  const definitions = definitionToMarkdown(story);
+  const sections = story.sections
+    .map((section) => sectionToMarkdown(section))
     .join("\n");
-  return `${chapters}\n\n${mermaidComment}\n\`\`\`mermaid\n${mermaid}\n\`\`\``;
+  return `${definitions}\n\n${sections}\n\n${mermaidComment}\n\`\`\`mermaid\n${mermaid}\n\`\`\``;
 }
 
-function chapterToMarkdown(chapter: Chapter): string {
+export function definitionToMarkdown(story: Story): string {
+  const settings =
+    "```json\n" + JSON.stringify(story.settings, undefined, 2) + "\n```";
+  return `# ${story.title}\n\n${settings}`;
+}
+
+export function sectionToMarkdown(section: Section): string {
   let ret = "";
-  ret = ret + `## ${chapter.heading}\n`;
-  ret = ret + partsToMarkdown(chapter.parts, chapter.settings);
+  ret = ret + `## ${section.heading}\n`;
+  ret = ret + partsToMarkdown(section.parts, section.settings);
 
   return ret;
 }
 
 export function partsToMarkdown(
   parts: Part[],
-  chapterSettings?: Settings
+  sectionSettings?: Settings
 ): string {
   let firstAction = true;
   return parts
@@ -300,7 +307,7 @@ export function partsToMarkdown(
         case "navigation":
           return `\`->[${part.text}](${part.target})\`\n\n`;
         case "action": {
-          const settings = firstAction ? chapterSettings : undefined;
+          const settings = firstAction ? sectionSettings : undefined;
           firstAction = false;
           return (
             "```json\n" +
@@ -329,16 +336,16 @@ function conditionToMarkdown(code: Condition): string {
 
 export function storyToMermaid(story: Story): string {
   let ret = "flowchart TD\n";
-  for (const chapter of story.chapters) {
-    const hasAction = chapter.parts.find((part) => part.type === "action");
+  for (const section of story.sections) {
+    const hasAction = section.parts.find((part) => part.type === "action");
     const icon = hasAction ? " ⭐" : "";
 
-    ret = `${ret}    ${chapter.id}["${chapter.heading}${icon}"]\n`;
-    ret = `${ret}    click ${chapter.id} "#${chapter.id}"\n`;
-    for (const part of chapter.parts) {
+    ret = `${ret}    ${section.id}["${section.heading}${icon}"]\n`;
+    ret = `${ret}    click ${section.id} "#${section.id}"\n`;
+    for (const part of section.parts) {
       if (part.type === "choice") {
         const target = part.target.replace(/^#/, "");
-        ret = `${ret}    ${chapter.id} -->|"${part.text}"| ${target}\n`;
+        ret = `${ret}    ${section.id} -->|"${part.text}"| ${target}\n`;
       }
       if (part.type === "condition") {
         const navigationPart = part.true?.find((part) =>
@@ -346,7 +353,7 @@ export function storyToMermaid(story: Story): string {
         ) as Navigation | Choice | undefined;
         if (navigationPart) {
           const target = navigationPart.target.replace(/^#/, "");
-          ret = `${ret}    ${chapter.id} -.->|"${part.condition}"| ${target}\n`;
+          ret = `${ret}    ${section.id} -.->|"${part.condition}"| ${target}\n`;
         }
       }
     }
