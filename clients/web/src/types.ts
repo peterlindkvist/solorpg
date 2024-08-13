@@ -46,9 +46,9 @@ export type Navigation = {
   target: string;
 };
 
-export type Action = {
+export type Action<T = State> = {
   type: "action";
-  state: State;
+  state: T;
   text?: string;
   markdown?: string;
   error?: string;
@@ -98,7 +98,7 @@ export type Story = {
   sections: Section[];
   images: Image[];
   state: State;
-  settings: Settings;
+  settings: Action<Settings & State>;
 };
 
 export type Page = "edit" | "game";

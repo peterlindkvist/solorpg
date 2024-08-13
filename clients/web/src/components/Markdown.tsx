@@ -111,7 +111,7 @@ function chatgptCommand({ story }: Props): commands.ICommand {
       const state1 = api.setSelectionRange(newSelectionRange);
       const selectedText = state1.selectedText;
 
-      if (!story.settings.assistant) {
+      if (!story.settings.state?.assistant) {
         api.replaceSelection(
           `To be able to use assistant, please enable it in the story settings. \n ${selectedText}`
         );
@@ -126,14 +126,14 @@ function chatgptCommand({ story }: Props): commands.ICommand {
         const image = await soloapi.textToImage({
           storyId: story.id,
           description,
-          context: story.settings.assistant.imageContext,
+          context: story.settings.state?.assistant.imageContext,
         });
         const comment = `<!--- ${image.text} -->`;
         newText = `${comment}\n![${description}](${image.url})`;
       } else {
         const text = await soloapi.textToText({
           text: selectedText,
-          context: story.settings.assistant.textContext,
+          context: story.settings.state?.assistant.textContext,
         });
         newText = text.text;
       }

@@ -6,6 +6,7 @@
 }
 
 .editor-containger {
+  display: flex;
   flex-direction: row;
 }
 

@@ -11,8 +11,8 @@ import {
   Paragraph,
   Part,
   Settings,
-  State,
   Story,
+  State,
 } from "../types";
 
 // default mode
@@ -33,7 +33,6 @@ function parseImage(token: Token): Image | undefined {
       .replace(/-->/, "")
       .trim();
     const url = image.attrs?.find(([key]) => key === "src")?.[1];
-    console.log("parseImage", { image, description });
     return {
       type: "image",
       text: image.content,
@@ -116,13 +115,12 @@ export function parseMarkdown(markdown: string): Story {
   let inHeading = false;
   let isChapterDefinition = false;
   let storyName = "";
-  let settings = {};
+  let settings: Action<Settings & State> = { type: "action", state: {} };
   const inCode: { active: boolean; parts: Part[]; token?: Token } = {
     active: false,
     parts: [],
   };
 
-  console.log("tokens", tokens);
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     let part: Part | undefined;
@@ -165,7 +163,6 @@ export function parseMarkdown(markdown: string): Story {
           }
         }
       } else if (image) {
-        console.log("image", image, token);
         part = parseImage(token);
       } else if (link && token.children) {
         const text = token.children
@@ -219,18 +216,21 @@ export function parseMarkdown(markdown: string): Story {
     if (token.type === "fence" && token.info !== "mermaid") {
       part = parseActionPart(token.content);
       if (isChapterDefinition) {
-        const { title, author, theme, voiceUrl, assistant } =
-          part.state as State & Settings;
+        // const { title, author, theme, voiceUrl, assistant } =
+        //   part.state as State & Settings;
 
-        settings = { title, author, theme, voiceUrl, assistant };
+        // settings = { title, author, theme, voiceUrl, assistant };
+        settings = part;
+        console.log("settings", part);
       }
     }
 
-    console.log("part", isChapterDefinition, token, part);
     if (part && !isChapterDefinition) {
       inCode.active ? inCode.parts.push(part) : section.parts.push(part);
     }
   }
+
+  console.log("before return", settings);
 
   return {
     id: storyName ?? "",
@@ -269,24 +269,19 @@ export function storyToMarkdown(story: Story): string {
 }
 
 export function definitionToMarkdown(story: Story): string {
-  const settings =
-    "```json\n" + JSON.stringify(story.settings, undefined, 2) + "\n```";
+  const settings = actionToMarkdown(story.settings);
   return `# ${story.title}\n\n${settings}`;
 }
 
 export function sectionToMarkdown(section: Section): string {
   let ret = "";
   ret = ret + `## ${section.heading}\n`;
-  ret = ret + partsToMarkdown(section.parts, section.settings);
+  ret = ret + partsToMarkdown(section.parts);
 
   return ret;
 }
 
-export function partsToMarkdown(
-  parts: Part[],
-  sectionSettings?: Settings
-): string {
-  let firstAction = true;
+export function partsToMarkdown(parts: Part[]): string {
   return parts
     .map((part) => {
       switch (part.type) {
@@ -307,19 +302,22 @@ export function partsToMarkdown(
         case "navigation":
           return `\`->[${part.text}](${part.target})\`\n\n`;
         case "action": {
-          const settings = firstAction ? sectionSettings : undefined;
-          firstAction = false;
-          return (
-            "```json\n" +
-            (part.markdown
-              ? part.markdown + part.error
-              : JSON.stringify({ ...settings, ...part.state }, undefined, 2)) +
-            "\n```\n\n"
-          );
+          return actionToMarkdown(part) + "\n\n";
         }
       }
     })
     .join("");
+}
+
+function actionToMarkdown(action: Action): string {
+  console.log("actionToMarkdown", action);
+  return (
+    "```json\n" +
+    (action.markdown
+      ? action.markdown + action.error
+      : JSON.stringify(action.state, undefined, 2)) +
+    "\n```"
+  );
 }
 
 function conditionToMarkdown(code: Condition): string {

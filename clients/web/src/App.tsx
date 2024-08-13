@@ -12,6 +12,9 @@ function App() {
   const [story, setStory] = useState<Story>();
   const [page, setPage] = useState<Page>("edit");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).story = story;
+
   const saveAndUpdateStory = useCallback(
     async (story: Story) => {
       if (bookName === undefined || chapterName === undefined) {
@@ -19,7 +22,6 @@ function App() {
       }
       const markdown = storyToMarkdown(story);
       story.markdown = markdown;
-      console.log("story", story);
       await api.saveStory(bookName, chapterName, markdown);
       setStory(story);
     },
