@@ -11,7 +11,7 @@ function App() {
   const [chapterName, setChapterName] = useState<string>();
   const [story, setStory] = useState<Story>();
   const [page, setPage] = useState<Page>("edit");
-
+  const storyId = `${bookName}/${chapterName}`;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (globalThis as any).story = story;
 
@@ -57,7 +57,7 @@ function App() {
       <div className="editor-container">
         {page === "edit" && story && (
           <Markdown
-            storyId={` ${bookName}/${chapterName}`}
+            storyId={storyId}
             story={story}
             updateStory={saveAndUpdateStory}
             setPage={setPage}
@@ -65,7 +65,9 @@ function App() {
         )}
       </div>
       <div className="game-container">
-        {page === "game" && <Game story={story} exit={() => setPage("edit")} />}
+        {page === "game" && (
+          <Game storyId={storyId} story={story} exit={() => setPage("edit")} />
+        )}
       </div>
     </>
   );

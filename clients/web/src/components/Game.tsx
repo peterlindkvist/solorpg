@@ -10,6 +10,7 @@ import { parseSection } from "../utils/gameUtils";
 import { Header } from "./game/Header";
 
 type Props = {
+  storyId?: string;
   story?: Story;
   exit: () => void;
 };
@@ -66,7 +67,9 @@ export function Game(props: Props) {
 
   const analyseUserVoice = useCallback(
     async (blob: Blob) => {
-      const ret = await api.speechToText(blob, { storyId: story?.id ?? "" });
+      const ret = await api.speechToText(blob, {
+        storyId: props.storyId ?? "",
+      });
       const spokenText = ret.text.toLowerCase();
       const choices: Choice[] =
         (section?.parts.filter((p) => p.type === "choice") as Choice[]) ?? [];
