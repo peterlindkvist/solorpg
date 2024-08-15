@@ -25,6 +25,11 @@ export type Paragraph = {
   text: string;
 };
 
+export type Header = {
+  type: "header";
+  text: string;
+};
+
 export type Comment = {
   type: "comment";
   text: string;
@@ -55,6 +60,7 @@ export type Action<T = State> = {
 };
 
 export type Part =
+  | Header
   | Choice
   | Image
   | Paragraph
@@ -65,11 +71,8 @@ export type Part =
 export type RenderPart = Image | Paragraph | Choice | Navigation;
 
 export type Settings = {
-  title?: string;
   author?: string;
-  error?: string;
   theme?: Theme;
-  voiceUrl?: string;
   assistant?: Assistant;
 };
 
@@ -92,8 +95,8 @@ export type State = Record<
 >;
 
 export type Story = {
-  id: string;
   title: string;
+  description?: string;
   markdown: string;
   sections: Section[];
   images: Image[];

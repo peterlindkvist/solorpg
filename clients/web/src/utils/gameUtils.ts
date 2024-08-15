@@ -1,58 +1,64 @@
 import { flatten, unflatten } from "safe-flat";
 import { Parser } from "expr-eval";
-import { Action, Section, Condition, Part, State } from "../types";
+import { Action, Section, Condition, Part, State, Settings } from "../types";
 import { DiceRoll } from "@dice-roller/rpg-dice-roller";
 
 type FlattenState = Record<string, string | number>;
 
 export function parseSection(
   section: Section,
-  state: State
+  state: State,
+  settings: Settings = {}
 ): {
   parts: Part[];
   newState: State;
   narratorText: string;
 } {
-  let newState = flatState(state);
+  let flatStateSettings = { ...flatState(settings), ...flatState(state) };
   const renderParts = [];
   for (const part of section.parts) {
     if (["image", "choice"].includes(part.type)) {
       renderParts.push(part);
     } else if (["paragraph"].includes(part.type)) {
-      const withState = replaceWithState(part.text ?? "", newState);
+      const withState = replaceWithState(part.text ?? "", flatStateSettings);
       renderParts.push({ ...part, text: withState });
     } else if (part.type === "navigation") {
       renderParts.push(part);
       break;
     } else if (part.type === "condition") {
-      const result = evaluateCondition(part, newState);
+      const result = evaluateCondition(part, flatStateSettings);
       const codeParts = result.isTrue ? part.true : part.false;
 
       renderParts.push(result.renderPart);
 
       for (const codePart of codeParts ?? []) {
         if (codePart.type === "paragraph") {
-          const withState = replaceWithState(codePart.text, newState);
+          const withState = replaceWithState(codePart.text, flatStateSettings);
           renderParts.push({ ...codePart, text: withState });
         } else if (codePart.type === "navigation") {
           renderParts.push(codePart);
           break;
         } else if (codePart.type === "action") {
-          const { state, renderPart } = evaluateAction(codePart, newState);
-          newState = state;
+          const { state, renderPart } = evaluateAction(
+            codePart,
+            flatStateSettings
+          );
+          flatStateSettings = state;
           renderParts.push(renderPart);
         }
       }
     } else if (part.type === "action") {
-      const { state, renderPart } = evaluateAction(part, newState);
-      newState = state;
+      const { state, renderPart } = evaluateAction(part, flatStateSettings);
+      flatStateSettings = state;
       renderParts.push(renderPart);
     }
   }
 
+  const newState = omit(unFlatState(flatStateSettings), Object.keys(settings));
+
   return {
     parts: renderParts,
-    newState: unFlatState(newState),
+    newState,
     narratorText: getNarratorText(renderParts),
   };
 }
@@ -237,4 +243,21 @@ export function flatState(state: State): FlattenState {
 
 export function unFlatState(state: Partial<FlattenState>): State {
   return unflatten(state) as State;
+}
+
+function omit<T extends Record<string, unknown>, K extends keyof T>(
+  obj: T,
+  props: Array<keyof T>
+): Omit<T, K> {
+  return Object.entries(obj).reduce(
+    (acc: Omit<T, K>, [key, value]: [string, unknown]) => {
+      return props.includes(key as keyof T)
+        ? acc
+        : {
+            ...acc,
+            [key]: value,
+          };
+    },
+    {} as Omit<T, K>
+  );
 }

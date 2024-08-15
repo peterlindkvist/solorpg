@@ -14,6 +14,7 @@ import { getCodeString } from "rehype-rewrite";
 import mermaid from "mermaid";
 
 type Props = {
+  storyId: string;
   story: Story;
   updateStory: (story: Story) => void;
   setPage: (page: Page) => void;
@@ -71,7 +72,7 @@ const Code = (props: any) => {
   return <code className={props.className}>{props.children}</code>;
 };
 
-function chatgptCommand({ story }: Props): commands.ICommand {
+function chatgptCommand({ story, storyId }: Props): commands.ICommand {
   return {
     name: "ChatGPT",
     keyCommand: "chatgpt",
@@ -124,7 +125,7 @@ function chatgptCommand({ story }: Props): commands.ICommand {
       if (imageMatch) {
         const description = imageMatch[1];
         const image = await soloapi.textToImage({
-          storyId: story.id,
+          storyId,
           description,
           context: story.settings.state?.assistant.imageContext,
         });
@@ -237,25 +238,24 @@ function toggleMermaidCommand(
 }
 
 export function Markdown(props: Props) {
-  const { story, updateStory } = props;
+  const { storyId, story, updateStory } = props;
   const [markdown, setMarkdown] = useState(story?.markdown ?? "");
   const [showMermaid, setShowMermaid] = useState(false);
 
   const fileUpload = useCallback(
     async (file: File) => {
-      if (!story) return;
-      const ret = await api.fileUpload(file, story.id);
+      if (!storyId) return;
+      const ret = await api.fileUpload(file, storyId);
       return ret?.url;
     },
-    [story]
+    [storyId]
   );
 
   const onSave = useCallback(() => {
     const updatedStory = parseMarkdown(markdown);
-    console.log("updatedStory", updatedStory);
     setMarkdown(storyToMarkdown(updatedStory));
     updateStory(updatedStory);
-  }, [story, updateStory, markdown]);
+  }, [updateStory, markdown]);
 
   useEffect(() => {
     setMarkdown(story?.markdown ?? "");

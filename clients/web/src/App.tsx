@@ -57,6 +57,7 @@ function App() {
       <div className="editor-container">
         {page === "edit" && story && (
           <Markdown
+            storyId={` ${bookName}/${chapterName}`}
             story={story}
             updateStory={saveAndUpdateStory}
             setPage={setPage}

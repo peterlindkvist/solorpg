@@ -110,12 +110,16 @@ function parseCode(codeData: CodeData): Condition {
 export function parseMarkdown(markdown: string): Story {
   const tokens = md.parse(markdown, {});
 
+  console.log("tokens", tokens);
+
   const sections: Array<Section> = [];
   let section: Section = { parts: [] };
-  let inHeading = false;
-  let isChapterDefinition = false;
+  let inHeading: string | undefined;
+  let inChapterIntro = false;
   let storyName = "";
   let settings: Action<Settings & State> = { type: "action", state: {} };
+  let storyDescription: string | undefined;
+
   const inCode: { active: boolean; parts: Part[]; token?: Token } = {
     active: false,
     parts: [],
@@ -128,13 +132,13 @@ export function parseMarkdown(markdown: string): Story {
     if (!token) continue;
 
     if (token.type === "heading_open") {
-      inHeading = true;
-      isChapterDefinition = token.tag === "h1";
+      inHeading = token.tag;
+      inChapterIntro = token.tag === "h1";
       section = { parts: [] };
     }
     if (token.type === "heading_close") {
-      inHeading = false;
-      if (!isChapterDefinition) {
+      inHeading = undefined;
+      if (!inChapterIntro) {
         sections.push(section);
       }
     }
@@ -186,16 +190,24 @@ export function parseMarkdown(markdown: string): Story {
         }
       } else {
         if (inHeading) {
-          if (isChapterDefinition) {
+          if (inChapterIntro) {
             storyName = token.content;
           }
-          section.heading = token.content;
+          const heading = token.content.replace(/<!---.*-->/, "").trim();
+          section.heading = heading;
           section.id = encodeURIComponent(
-            token.content.toLowerCase().replace(/ /g, "-")
+            heading.toLowerCase().replace(/ /g, "-")
           );
+          if (inHeading === "h2") {
+            console.log("section", section, inHeading);
+            part = {
+              type: "header",
+              text: heading,
+            };
+          }
         } else {
           if (token.content.startsWith("<!--")) {
-            if (token.content !== mermaidComment) {
+            if (token.content !== mermaidComment && !inHeading) {
               part = {
                 type: "comment",
                 text: token.content
@@ -205,36 +217,35 @@ export function parseMarkdown(markdown: string): Story {
               };
             }
           } else {
-            part = {
-              type: "paragraph",
-              text: token.content,
-            };
+            if (inChapterIntro) {
+              storyDescription = `${storyDescription ?? ""}${
+                token.content
+              }\n\n`;
+            } else {
+              part = {
+                type: "paragraph",
+                text: token.content,
+              };
+            }
           }
         }
       }
     }
     if (token.type === "fence" && token.info !== "mermaid") {
       part = parseActionPart(token.content);
-      if (isChapterDefinition) {
-        // const { title, author, theme, voiceUrl, assistant } =
-        //   part.state as State & Settings;
-
-        // settings = { title, author, theme, voiceUrl, assistant };
+      if (inChapterIntro) {
         settings = part;
-        console.log("settings", part);
       }
     }
 
-    if (part && !isChapterDefinition) {
+    if (part && !inChapterIntro) {
       inCode.active ? inCode.parts.push(part) : section.parts.push(part);
     }
   }
 
-  console.log("before return", settings);
-
   return {
-    id: storyName ?? "",
     title: storyName ?? "",
+    description: storyDescription,
     markdown: markdown,
     sections,
     images: findImages(sections),
@@ -261,21 +272,24 @@ export function renderMarkdown(markdown: string): string {
 
 export function storyToMarkdown(story: Story): string {
   const mermaid = storyToMermaid(story);
-  const definitions = definitionToMarkdown(story);
+  const intro = introToMarkdown(story);
   const sections = story.sections
     .map((section) => sectionToMarkdown(section))
     .join("\n");
-  return `${definitions}\n\n${sections}\n\n${mermaidComment}\n\`\`\`mermaid\n${mermaid}\n\`\`\``;
+  return `${intro}\n\n${sections}\n\n${mermaidComment}\n\`\`\`mermaid\n${mermaid}\n\`\`\``;
 }
 
-export function definitionToMarkdown(story: Story): string {
+export function introToMarkdown(story: Story): string {
   const settings = actionToMarkdown(story.settings);
-  return `# ${story.title}\n\n${settings}`;
+  const description = story.description ? `${story.description}` : "";
+  return `# ${story.title}\n\n${description}${settings}`;
 }
 
 export function sectionToMarkdown(section: Section): string {
   let ret = "";
-  ret = ret + `## ${section.heading}\n`;
+  const visibleHeading = section.parts.find((p) => p.type === "header");
+  const headerSize = visibleHeading ? "##" : "###";
+  ret = ret + `${headerSize} ${section.heading} <!--- #${section.id} -->\n\n`;
   ret = ret + partsToMarkdown(section.parts);
 
   return ret;

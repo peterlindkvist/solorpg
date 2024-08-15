@@ -22,10 +22,13 @@ export function Game(props: Props) {
   const [renderParts, setRenderParts] = useState<Array<Part>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [useUserVoice, setUseUserVoice] = useState(false);
-  const [useNarrator, setUseNarrator] = useState(true);
+  const [useNarrator, setUseNarrator] = useState(false);
   // const [narratorUrl, setNarratorFile] = useState<string>();
   const [isLoadingNarrator, setIsLoadingNarrator] = useState(false);
   const [state, setState] = useState<State>();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).state = state;
 
   const { startRecording, stopRecording } = useReactMediaRecorder({
     audio: useUserVoice,
@@ -90,7 +93,8 @@ export function Game(props: Props) {
         if (newsection) {
           const { parts, newState, narratorText } = parseSection(
             newsection,
-            oldState
+            oldState,
+            story?.settings.state
           );
           setRenderParts(parts);
           setState(newState);
@@ -130,7 +134,7 @@ export function Game(props: Props) {
     [story, section, useNarrator]
   );
 
-  const navigateTosection = useCallback(
+  const navigateToSection = useCallback(
     (id: string) => {
       const sectionId = id.replace(/^#/, "");
       const nextsection = story?.sections.find((c) => c.id === sectionId);
@@ -182,14 +186,16 @@ export function Game(props: Props) {
       />
 
       <div className="game-section">
-        <h2>{section?.heading}</h2>
         {renderParts.map((part, i) => {
+          if (part.type === "header") {
+            return <h2>{section?.heading}</h2>;
+          }
           if (part.type === "image") {
             return <ImagePart key={i} part={part} />;
           }
           if (part.type === "choice" || part.type === "navigation") {
             return (
-              <ButtonPart key={i} part={part} onClick={navigateTosection} />
+              <ButtonPart key={i} part={part} onClick={navigateToSection} />
             );
           }
           if (part.type === "paragraph") {
