@@ -19,7 +19,6 @@ async function textToImage(description, context, renderType) {
     size: "1024x1024",
   };
   const response = await openai.images.generate(query);
-  console.log("response", response);
   const fileName = `${hashString(prompt)}.jpg`;
   const data = response?.data?.[0];
   if (!data) {
@@ -40,7 +39,6 @@ async function textToSpeech(text, voice) {
     input: text,
   });
   const fileName = `${hashString(`${voice}_${text}`)}.mp3`;
-  console.log(mp3);
 
   return {
     buffer: Buffer.from(await mp3.arrayBuffer()),

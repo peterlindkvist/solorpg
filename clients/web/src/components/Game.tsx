@@ -17,6 +17,8 @@ type Props = {
 
 let recordInterval: NodeJS.Timeout | undefined;
 
+const SHOW_HEADER_MENU = false;
+
 export function Game(props: Props) {
   const [story, setStory] = useState<Story>();
   const [section, setSection] = useState<Section>();
@@ -180,13 +182,15 @@ export function Game(props: Props) {
       className="game"
       style={isRecording ? { backgroundColor: "#ff000060" } : {}}
     >
-      <Header
-        exit={props.exit}
-        setSound={setUseNarrator}
-        toggleVoice={toggleUserVoice}
-        sound={useNarrator}
-        voice={useUserVoice}
-      />
+      {SHOW_HEADER_MENU && (
+        <Header
+          exit={props.exit}
+          setSound={setUseNarrator}
+          toggleVoice={toggleUserVoice}
+          sound={useNarrator}
+          voice={useUserVoice}
+        />
+      )}
 
       <div className="game-section">
         {renderParts.map((part, i) => {

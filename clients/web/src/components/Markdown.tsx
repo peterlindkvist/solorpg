@@ -121,7 +121,6 @@ function chatgptCommand({ story, storyId }: Props): commands.ICommand {
 
       let newText = selectedText;
       const imageMatch = selectedText.match(/!\[(.*)\]\(.*\)/);
-      console.log("imageMatch", imageMatch);
       if (imageMatch) {
         const description = imageMatch[1];
         const image = await soloapi.textToImage({
@@ -163,6 +162,7 @@ function startGameCommand({ setPage }: Props): commands.ICommand {
         fill-rule="evenodd"
         clip-rule="evenodd"
         viewBox="0 0 24 24"
+        fill="currentColor"
       >
         <path d="M23 12l-22 12v-24l22 12zm-21 10.315l18.912-10.315-18.912-10.315v20.63z" />
       </svg>
@@ -188,12 +188,12 @@ function saveCommand(onSave: () => void): commands.ICommand {
         role="img"
         xmlns="http://www.w3.org/2000/svg"
         aria-labelledby="saveIconTitle"
-        stroke="#000000"
+        stroke="currentColor"
         stroke-width="1"
         stroke-linecap="square"
         stroke-linejoin="miter"
         fill="none"
-        color="#000000"
+        color="currentColor"
       >
         <title id="saveIconTitle">Save</title>{" "}
         <path d="M17.2928932,3.29289322 L21,7 L21,20 C21,20.5522847 20.5522847,21 20,21 L4,21 C3.44771525,21 3,20.5522847 3,20 L3,4 C3,3.44771525 3.44771525,3 4,3 L16.5857864,3 C16.8510029,3 17.1053568,3.10535684 17.2928932,3.29289322 Z" />{" "}
@@ -217,7 +217,7 @@ function toggleMermaidCommand(
     buttonProps: { "aria-label": "Start Game" },
     icon: (
       <svg
-        fill="#000000"
+        fill="currentColor"
         height="13px"
         width="13px"
         version="1.1"

@@ -72,7 +72,24 @@ function parseActionPart(content: string): Action {
   }
 }
 
-function parseCode(codeData: CodeData): Condition {
+function parseCodeToken(token?: Token): Part[] {
+  if (!token) {
+    return [];
+  }
+  const parts: Part[] = [];
+  for (const children of token?.children ?? []) {
+    switch (children.type) {
+      case "text": {
+        const part: Paragraph = { type: "paragraph", text: children.content };
+        parts.push(part);
+        break;
+      }
+    }
+  }
+  return parts;
+}
+
+function parseCode(codeData: CodeData, endToken: Token): Condition {
   let error: string | undefined;
 
   const condition = codeData.token?.children
@@ -82,18 +99,11 @@ function parseCode(codeData: CodeData): Condition {
   if (!condition) {
     error = "Could not parse condition";
   }
-  const childrenParts = [];
-  for (const children of codeData.token?.children ?? []) {
-    switch (children.type) {
-      case "text": {
-        const part: Paragraph = { type: "paragraph", text: children.content };
-        childrenParts.push(part);
-        break;
-      }
-    }
-  }
 
-  const allParts = [...childrenParts, ...codeData.parts];
+  const startParts = parseCodeToken(codeData.token);
+  const endParts = parseCodeToken(endToken);
+
+  const allParts = [...startParts, ...codeData.parts, ...endParts];
 
   if (allParts.length === 0) {
     error = "No parts found in code block";
@@ -109,8 +119,6 @@ function parseCode(codeData: CodeData): Condition {
 
 export function parseMarkdown(markdown: string): Story {
   const tokens = md.parse(markdown, {});
-
-  console.log("tokens", tokens);
 
   const sections: Array<Section> = [];
   let section: Section = { parts: [] };
@@ -156,14 +164,28 @@ export function parseMarkdown(markdown: string): Story {
         } else {
           const isStart = token.children?.at(0)?.content.endsWith("{");
           const isEnd = token.children?.at(-1)?.content.endsWith("}");
+          const remainingTokens = tokens.slice(i + 1);
+          const nextCode = remainingTokens.find((rt) =>
+            rt.children?.find((t) => t.type === "code_inline")
+          );
+          const nextCodeIsStart = nextCode
+            ? nextCode.children?.at(0)?.content.endsWith("{")
+            : undefined;
+          console.log("****code", {
+            isStart,
+            isEnd,
+            inCode,
+            nextCode,
+            nextCodeIsStart,
+          });
           if (isStart) {
             inCode.active = true;
             inCode.parts = [];
             inCode.token = token;
           }
-          if (isEnd) {
+          if (isEnd || !nextCode || nextCodeIsStart) {
             inCode.active = false;
-            part = parseCode(inCode);
+            part = parseCode(inCode, token);
           }
         }
       } else if (image) {
@@ -199,7 +221,6 @@ export function parseMarkdown(markdown: string): Story {
             heading.toLowerCase().replace(/ /g, "-")
           );
           if (inHeading === "h2") {
-            console.log("section", section, inHeading);
             part = {
               type: "header",
               text: heading,
@@ -280,9 +301,10 @@ export function storyToMarkdown(story: Story): string {
 }
 
 export function introToMarkdown(story: Story): string {
+  const title = `# ${story.title || "???????"}\n\n`;
   const settings = actionToMarkdown(story.settings);
   const description = story.description ? `${story.description}` : "";
-  return `# ${story.title}\n\n${description}${settings}`;
+  return `${title}${description}${settings}`;
 }
 
 export function sectionToMarkdown(section: Section): string {
@@ -324,7 +346,6 @@ export function partsToMarkdown(parts: Part[]): string {
 }
 
 function actionToMarkdown(action: Action): string {
-  console.log("actionToMarkdown", action);
   return (
     "```json\n" +
     (action.markdown
@@ -338,7 +359,7 @@ function conditionToMarkdown(code: Condition): string {
   let ret = "";
   ret = ret + "`" + code.condition + " {`\n\n";
   if (code.true) {
-    ret = `${ret}${partsToMarkdown(code.true)}\n`;
+    ret = `${ret}${partsToMarkdown(code.true)}`;
   }
   if (code.false) {
     ret = ret + "`}:{`\n\n" + partsToMarkdown(code.false);

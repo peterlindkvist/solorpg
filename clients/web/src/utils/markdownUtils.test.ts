@@ -6,9 +6,9 @@ describe("markdownUtils", () => {
   describe("parseMarkdown", () => {
     describe("Header", () => {
       test("empty", () => {
-        const markdown = "# Header";
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = "### Header";
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -19,9 +19,9 @@ describe("markdownUtils", () => {
     });
     describe("Paragraph", () => {
       test("paragraph", () => {
-        const markdown = `# Header\ntext`;
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = `### Header\ntext`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -37,9 +37,9 @@ describe("markdownUtils", () => {
     });
     describe("Image", () => {
       test("image", () => {
-        const markdown = `# Header\n![imagetext](url)`;
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = `### Header\n![imagetext](url)`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -57,9 +57,9 @@ describe("markdownUtils", () => {
     describe("Action", () => {
       test("Error", () => {
         const codeMarker = "```";
-        const markdown = `# Header\n${codeMarker}\n{faulty}}\n${codeMarker}`;
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = `### Header\n${codeMarker}\n{faulty}}\n${codeMarker}`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -76,9 +76,9 @@ describe("markdownUtils", () => {
       });
       test("JSON", () => {
         const codeMarker = "```";
-        const markdown = `# Header\n${codeMarker}\n{"test": 1}\n${codeMarker}`;
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = `### Header\n${codeMarker}\n{"test": 1}\n${codeMarker}`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -93,9 +93,9 @@ describe("markdownUtils", () => {
       });
       test("JSON", () => {
         const codeMarker = "```";
-        const markdown = `# Header\n${codeMarker}json\n{"test": 1}\n${codeMarker}`;
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = `### Header\n${codeMarker}json\n{"test": 1}\n${codeMarker}`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -110,9 +110,9 @@ describe("markdownUtils", () => {
       });
       test("JSON5", () => {
         const codeMarker = "```";
-        const markdown = `# Header\n${codeMarker}\n{test: 1, // comment \n}\n${codeMarker}`;
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = `### Header\n${codeMarker}\n{test: 1, // comment \n}\n${codeMarker}`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -128,9 +128,9 @@ describe("markdownUtils", () => {
     });
     describe("Code", () => {
       test("navigation", () => {
-        const markdown = "# Header\n `->[text](target)`";
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = "### Header\n `->[text](target)`";
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -146,9 +146,9 @@ describe("markdownUtils", () => {
       });
       test("condition one text", () => {
         const codeMarkdown = "`1=1 {`\n text\n `}`";
-        const markdown = `# Header\n ${codeMarkdown}`;
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = `### Header\n ${codeMarkdown}`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -163,9 +163,9 @@ describe("markdownUtils", () => {
         ]);
       });
       test("condition state", () => {
-        const markdown = "# Header\n `1<2 {`\n ```\n{a:1}\n```\n`}`";
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = "### Header\n `1<2 {`\n ```\n{a:1}\n```\n`}`";
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -186,9 +186,9 @@ describe("markdownUtils", () => {
       });
 
       test("condition state", () => {
-        const markdown = "# Header\n `1=1{`\n text2\n ```\n{a:1}\n```\n`}`";
-        const sections = parseMarkdown(markdown);
-        expect(sections).toEqual([
+        const markdown = "### Header\n `1=1{`\n text2\n ```\n{a:1}\n```\n`}`";
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
@@ -208,9 +208,90 @@ describe("markdownUtils", () => {
           },
         ]);
       });
+
+      test("condition missing end", () => {
+        const markdown = "### Header\n `1=1{`\n text1\n\ntext2\n\n";
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "condition",
+                condition: "1=1",
+                true: [{ type: "paragraph", text: "text1" }],
+              },
+              { type: "paragraph", text: "text2" },
+            ],
+          },
+        ]);
+      });
+
+      test.only("condition new condition", () => {
+        const markdown = "### Header\n `1=1{`\n text1\n\n`2=2{`\n\n`}`";
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "condition",
+                condition: "1=1",
+                true: [{ type: "paragraph", text: "text1" }],
+              },
+              { type: "paragraph", text: "text2" },
+            ],
+          },
+        ]);
+      });
+
+      test("condition close end", () => {
+        const markdown = "### Header\n `1=1{`\n text1\n\ntext2\n`}`\n\ntext3";
+        const story = parseMarkdown(markdown);
+        console.dir(story.sections, { depth: 100 });
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "condition",
+                condition: "1=1",
+                true: [
+                  { type: "paragraph", text: "text1" },
+                  { type: "paragraph", text: "text2" },
+                ],
+              },
+              { type: "paragraph", text: "text3" },
+            ],
+          },
+        ]);
+      });
+
+      test.skip("condition close after end", () => {
+        const markdown = "### Header\n `1=1{`\n text1\n\n`}`\ntext3";
+        const story = parseMarkdown(markdown);
+        console.dir(story.sections, { depth: 100 });
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "condition",
+                condition: "1=1",
+                true: [{ type: "paragraph", text: "text1" }],
+              },
+              { type: "paragraph", text: "text3" },
+            ],
+          },
+        ]);
+      });
     });
   });
-  describe.only("partsToMarkdown", () => {
+  describe("partsToMarkdown", () => {
     describe("paragraph", () => {
       test("simple", () => {
         const part: Paragraph = {

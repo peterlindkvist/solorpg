@@ -52,6 +52,10 @@ function App() {
     }
   }
 
+  if (story?.title) {
+    document.title = `${story.title}`;
+  }
+
   return (
     <>
       <div className="editor-container">
