@@ -177,9 +177,9 @@ function startGameCommand({ setPage }: Props): commands.ICommand {
 
 function saveCommand(onSave: () => void): commands.ICommand {
   return {
-    name: "start game",
-    keyCommand: "startGame",
-    buttonProps: { "aria-label": "Start Game" },
+    name: "save game",
+    keyCommand: "saveGame",
+    buttonProps: { "aria-label": "Save Game" },
     icon: (
       <svg
         width="13px"

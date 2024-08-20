@@ -104,6 +104,9 @@ export function Game(props: Props) {
           setRenderParts(parts);
           setState(newState);
           setSection(newsection);
+
+          document.querySelector("body")?.scrollIntoView();
+
           if (useNarrator && story) {
             setIsLoadingNarrator(true);
             isLoadingNarrator;
