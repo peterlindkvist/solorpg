@@ -5,8 +5,8 @@ export type Section = {
   settings?: Settings;
 };
 
-export type Choice = {
-  type: "choice";
+export type Link = {
+  type: "link";
   text: string;
   target: string;
   key: string;
@@ -23,6 +23,7 @@ export type Image = {
 export type Paragraph = {
   type: "paragraph";
   text: string;
+  variant?: "blockquote" | "citation";
 };
 
 export type Header = {
@@ -61,14 +62,14 @@ export type Action<T = State> = {
 
 export type Part =
   | Header
-  | Choice
+  | Link
   | Image
   | Paragraph
   | Condition
   | Navigation
   | Action
   | Comment;
-export type RenderPart = Image | Paragraph | Choice | Navigation;
+export type RenderPart = Image | Paragraph | Link | Navigation;
 
 export type Settings = {
   author?: string;

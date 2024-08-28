@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Section, Choice, Part, State, Story } from "../types";
+import { Section, Link, Part, State, Story } from "../types";
 import { useReactMediaRecorder } from "react-media-recorder";
 import * as api from "../utils/api";
 
@@ -13,6 +13,8 @@ import {
   parseStateQueryValue,
 } from "../utils/gameUtils";
 import { Header } from "./game/Header";
+import { render } from "react-dom";
+import { ParagraphPart } from "./game/ParagraphPart";
 
 type Props = {
   storyId?: string;
@@ -78,9 +80,9 @@ export function Game(props: Props) {
         storyId: props.storyId ?? "",
       });
       const spokenText = ret.text.toLowerCase();
-      const choices: Choice[] =
-        (section?.parts.filter((p) => p.type === "choice") as Choice[]) ?? [];
-      const found = choices.find((c) => spokenText.includes(c.key));
+      const links: Link[] =
+        (section?.parts.filter((p) => p.type === "link") as Link[]) ?? [];
+      const found = links.find((c) => spokenText.includes(c.key));
 
       if (found) {
         setSection(story?.sections.find((c) => c.id === found.target));
@@ -193,6 +195,8 @@ export function Game(props: Props) {
     setHash(section, newState);
   }
 
+  console.log("render", renderParts, section);
+
   return (
     <div
       className="game"
@@ -216,15 +220,11 @@ export function Game(props: Props) {
           if (part.type === "image") {
             return <ImagePart key={i} part={part} />;
           }
-          if (part.type === "choice" || part.type === "navigation") {
+          if (part.type === "link" || part.type === "navigation") {
             return <ButtonPart key={i} part={part} onClick={navigateHandler} />;
           }
           if (part.type === "paragraph") {
-            return (
-              <p className="game-text" key={i}>
-                {part.text}
-              </p>
-            );
+            return <ParagraphPart key={i} part={part} />;
           }
           if (part.type === "action" || part.type === "condition") {
             return (

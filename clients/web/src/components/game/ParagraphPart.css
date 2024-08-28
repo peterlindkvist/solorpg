@@ -1,0 +1,12 @@
+.game-paragraph {
+  font-size: 1em;
+  text-align: left;
+  font-family: Garamond, Georgia, serif;
+}
+
+.game-paragraph-blockquote {
+  font-style: italic;
+  font-size: 1em;
+  text-align: left;
+  font-family: Garamond, Georgia, serif;
+}

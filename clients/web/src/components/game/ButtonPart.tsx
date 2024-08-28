@@ -1,8 +1,8 @@
 import "./ButtonPart.css";
-import { Choice, Navigation } from "../../types";
+import { Link, Navigation } from "../../types";
 
 type Props = {
-  part: Choice | Navigation;
+  part: Link | Navigation;
   onClick: (target: string) => void;
 };
 
@@ -14,7 +14,8 @@ export function ButtonPart({ part, onClick }: Props) {
         key={part.target}
         onClick={() => onClick(part.target)}
       >
-        {part.type === "choice" ? part.text : ">"}
+        {part.type === "link" ? part.text : ">"}
+        {part.target.startsWith("http") && " 🡕"}
       </button>
     </div>
   );

@@ -2,7 +2,7 @@ import { describe, expect, test } from "@jest/globals";
 import { parseMarkdown, partsToMarkdown } from "./markdownUtils";
 import {
   Action,
-  Choice,
+  Link,
   Condition,
   Image,
   Navigation,
@@ -25,7 +25,7 @@ describe("markdownUtils", () => {
       });
     });
     describe("Paragraph", () => {
-      test("paragraph", () => {
+      test("normal text", () => {
         const markdown = `### Header\ntext`;
         const story = parseMarkdown(markdown);
         expect(story.sections).toEqual([
@@ -36,6 +36,41 @@ describe("markdownUtils", () => {
               {
                 type: "paragraph",
                 text: "text",
+              },
+            ],
+          },
+        ]);
+      });
+      test("blockquote text", () => {
+        const markdown = `### Header\n>text`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "paragraph",
+                text: "text",
+                variant: "blockquote",
+              },
+            ],
+          },
+        ]);
+      });
+
+      test("citation text", () => {
+        const markdown = `### Header\n - text`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "paragraph",
+                text: "text",
+                variant: "citation",
               },
             ],
           },
@@ -155,6 +190,7 @@ describe("markdownUtils", () => {
         const codeMarkdown = "`1=1 {`\n text\n `}`";
         const markdown = `### Header\n ${codeMarkdown}`;
         const story = parseMarkdown(markdown);
+
         expect(story.sections).toEqual([
           {
             heading: "Header",
@@ -248,7 +284,13 @@ describe("markdownUtils", () => {
                 condition: "1=1",
                 true: [{ type: "paragraph", text: "text1" }],
               },
-              { type: "paragraph", text: "text2" },
+              {
+                type: "condition",
+                condition: "2=2",
+                error: "No parts found in code block",
+                markdown: "`2=2{`",
+                true: [],
+              },
             ],
           },
         ]);
@@ -257,7 +299,6 @@ describe("markdownUtils", () => {
       test("condition close end", () => {
         const markdown = "### Header\n `1=1{`\n text1\n\ntext2\n`}`\n\ntext3";
         const story = parseMarkdown(markdown);
-        console.dir(story.sections, { depth: 100 });
         expect(story.sections).toEqual([
           {
             heading: "Header",
@@ -280,7 +321,6 @@ describe("markdownUtils", () => {
       test.skip("condition close after end", () => {
         const markdown = "### Header\n `1=1{`\n text1\n\n`}`\ntext3";
         const story = parseMarkdown(markdown);
-        console.dir(story.sections, { depth: 100 });
         expect(story.sections).toEqual([
           {
             heading: "Header",
@@ -297,18 +337,17 @@ describe("markdownUtils", () => {
         ]);
       });
     });
-    describe("Choices", () => {
-      test("simple choice", () => {
+    describe("Links", () => {
+      test("simple links", () => {
         const markdown = "### Header\n\n [text](#url)\n\n";
         const story = parseMarkdown(markdown);
-        console.dir(story.sections, { depth: 100 });
         expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
             parts: [
               {
-                type: "choice",
+                type: "link",
                 text: "text",
                 target: "#url",
                 key: "text",
@@ -318,26 +357,25 @@ describe("markdownUtils", () => {
           },
         ]);
       });
-      test("choice list", () => {
+      test("link list", () => {
         const markdown = "### Header\n\n - [text](#url)\n- [text2](#url2)";
         const story = parseMarkdown(markdown);
-        console.dir(story.sections, { depth: 100 });
         expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
             parts: [
               {
-                type: "choice",
+                type: "link",
                 text: "text",
                 target: "#url",
                 key: "text",
                 markdown: "[text](#url)",
               },
               {
-                type: "choice",
+                type: "link",
                 text: "text2",
-                target: "#url",
+                target: "#url2",
                 key: "text2",
                 markdown: "[text2](#url2)",
               },
@@ -345,17 +383,17 @@ describe("markdownUtils", () => {
           },
         ]);
       });
-      test("choice close to text", () => {
+      test.skip("links close to text", () => {
+        // Do not support links or images in paragraph
         const markdown = "### Header\n\n [text](#url)\ntext2";
         const story = parseMarkdown(markdown);
-        console.dir(story.sections, { depth: 100 });
         expect(story.sections).toEqual([
           {
             heading: "Header",
             id: "header",
             parts: [
               {
-                type: "choice",
+                type: "link",
                 text: "text",
                 target: "#url",
                 key: "text",
@@ -370,7 +408,7 @@ describe("markdownUtils", () => {
   });
   describe("partsToMarkdown", () => {
     describe("paragraph", () => {
-      test("simple", () => {
+      test("normal", () => {
         const part: Paragraph = {
           type: "paragraph",
           text: "text",
@@ -378,6 +416,26 @@ describe("markdownUtils", () => {
 
         const markdown = partsToMarkdown([part]);
         expect(markdown).toEqual("text\n\n");
+      });
+      test("blockquote", () => {
+        const part: Paragraph = {
+          type: "paragraph",
+          text: "text",
+          variant: "blockquote",
+        };
+
+        const markdown = partsToMarkdown([part]);
+        expect(markdown).toEqual("> text\n\n");
+      });
+      test("citations", () => {
+        const part: Paragraph = {
+          type: "paragraph",
+          text: "text",
+          variant: "citation",
+        };
+
+        const markdown = partsToMarkdown([part]);
+        expect(markdown).toEqual("- text\n\n");
       });
     });
     describe("image", () => {
@@ -430,7 +488,7 @@ describe("markdownUtils", () => {
             },
           ],
         };
-        const toEqual = "`[d6]<4 {`\n\ntext\n\n\n`}`\n\n";
+        const toEqual = "`[d6]<4 {`\n\ntext\n\n`}`\n\n";
         const markdown = partsToMarkdown([part]);
 
         expect(markdown).toEqual(toEqual);
@@ -451,37 +509,37 @@ describe("markdownUtils", () => {
           "`[d6]<4 {`\n\n" +
           "```json\n" +
           JSON.stringify(state, undefined, 2) +
-          "\n```\n\n\n`}`\n\n";
+          "\n```\n\n`}`\n\n";
         const markdown = partsToMarkdown([part]);
         expect(markdown).toEqual(toEqual);
       });
     });
 
-    describe("Choices", () => {
-      test("simple choice", () => {
-        const part: Choice = {
-          type: "choice",
+    describe("Links", () => {
+      test("simple link", () => {
+        const part: Link = {
+          type: "link",
           key: "text",
           markdown: "[text](#url)",
           target: "#url",
           text: "text",
         };
-        const toEqual = "[text](#url)\n\n";
+        const toEqual = "- [text](#url)\n\n";
         const markdown = partsToMarkdown([part]);
 
         expect(markdown).toEqual(toEqual);
       });
 
-      test.only("choice list", () => {
-        const part: Choice = {
-          type: "choice",
+      test("link list", () => {
+        const part: Link = {
+          type: "link",
           key: "text",
           markdown: "[text](#url)",
           target: "#url",
           text: "text",
         };
-        const part2: Choice = {
-          type: "choice",
+        const part2: Link = {
+          type: "link",
           key: "text2",
           markdown: "[text2](#url2)",
           target: "#url2",

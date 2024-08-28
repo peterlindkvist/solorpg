@@ -17,7 +17,9 @@ export function parseSection(
   let flatStateSettings = { ...flatState(settings), ...flatState(state) };
   const renderParts = [];
   for (const part of section.parts) {
-    if (["image", "choice"].includes(part.type)) {
+    if (["header"].includes(part.type)) {
+      renderParts.push(part);
+    } else if (["image", "link"].includes(part.type)) {
       renderParts.push(part);
     } else if (["paragraph"].includes(part.type)) {
       const withState = replaceWithState(part.text ?? "", flatStateSettings);

@@ -4,7 +4,7 @@ import json5 from "json5";
 import {
   Action,
   Section,
-  Choice,
+  Link,
   Condition,
   Image,
   Navigation,
@@ -80,7 +80,10 @@ function parseCodeToken(token?: Token): Part[] {
   for (const children of token?.children ?? []) {
     switch (children.type) {
       case "text": {
-        const part: Paragraph = { type: "paragraph", text: children.content };
+        const part: Paragraph = {
+          type: "paragraph",
+          text: children.content,
+        };
         parts.push(part);
         break;
       }
@@ -89,7 +92,7 @@ function parseCodeToken(token?: Token): Part[] {
   return parts;
 }
 
-function parseCode(codeData: CodeData, endToken: Token): Condition {
+function parseCode(codeData: CodeData, endToken?: Token): Condition {
   let error: string | undefined;
 
   const condition = codeData.token?.children
@@ -123,9 +126,14 @@ export function parseMarkdown(markdown: string): Story {
   const sections: Array<Section> = [];
   let section: Section = { parts: [] };
   let inHeading: string | undefined;
+  let inBlockQuote = false;
   let inChapterIntro = false;
+  let inBulletList = false;
   let storyName = "";
-  let settings: Action<Settings & State> = { type: "action", state: {} };
+  let settings: Action<Settings & State> = {
+    type: "action",
+    state: { author: "" },
+  };
   let storyDescription: string | undefined;
 
   const inCode: { active: boolean; parts: Part[]; token?: Token } = {
@@ -150,6 +158,18 @@ export function parseMarkdown(markdown: string): Story {
         sections.push(section);
       }
     }
+    if (token.type === "blockquote_open") {
+      inBlockQuote = true;
+    }
+    if (token.type === "blockquote_close") {
+      inBlockQuote = false;
+    }
+    if (token.type === "list_item_open") {
+      inBulletList = true;
+    }
+    if (token.type === "list_item_close") {
+      inBulletList = false;
+    }
     if (token.type === "inline") {
       const image = token.children?.find((token) => token.type === "image");
       const link = token.children?.find((token) => token.type === "link_open");
@@ -165,19 +185,21 @@ export function parseMarkdown(markdown: string): Story {
           const isStart = token.children?.at(0)?.content.endsWith("{");
           const isEnd = token.children?.at(-1)?.content.endsWith("}");
           const remainingTokens = tokens.slice(i + 1);
+
           const nextCode = remainingTokens.find((rt) =>
             rt.children?.find((t) => t.type === "code_inline")
           );
-          const nextCodeIsStart = nextCode
-            ? nextCode.children?.at(0)?.content.endsWith("{")
-            : undefined;
-          console.log("****code", {
-            isStart,
-            isEnd,
-            inCode,
-            nextCode,
-            nextCodeIsStart,
-          });
+          const nextCodeIsStart =
+            nextCode?.children?.at(0)?.content.endsWith("{") ?? false;
+
+          // console.log("****code", {
+          //   isStart,
+          //   isEnd,
+          //   inCode,
+          //   nextCode,
+          //   nextCodeIsStart,
+          //   token,
+          // });
           if (isStart) {
             inCode.active = true;
             inCode.parts = [];
@@ -185,7 +207,7 @@ export function parseMarkdown(markdown: string): Story {
           }
           if (isEnd || !nextCode || nextCodeIsStart) {
             inCode.active = false;
-            part = parseCode(inCode, token);
+            part = parseCode(inCode, isStart ? undefined : token);
           }
         }
       } else if (image) {
@@ -203,7 +225,7 @@ export function parseMarkdown(markdown: string): Story {
           ?.replace("", "");
         if (text && target) {
           part = {
-            type: "choice",
+            type: "link",
             text,
             target,
             key,
@@ -246,6 +268,11 @@ export function parseMarkdown(markdown: string): Story {
               part = {
                 type: "paragraph",
                 text: token.content,
+                variant: inBlockQuote
+                  ? "blockquote"
+                  : inBulletList
+                  ? "citation"
+                  : undefined,
               };
             }
           }
@@ -322,6 +349,11 @@ export function partsToMarkdown(parts: Part[]): string {
     .map((part, i) => {
       switch (part.type) {
         case "paragraph":
+          if (part.variant === "blockquote") {
+            return `> ${part.text}\n\n`;
+          } else if (part.variant === "citation") {
+            return `- ${part.text}\n\n`;
+          }
           return `${part.text}\n\n`;
         case "comment":
           return `<!--- ${part.text} -->\n\n`;
@@ -331,9 +363,9 @@ export function partsToMarkdown(parts: Part[]): string {
             : "";
           return `${description}![${part.text}](${part.url})\n\n`;
         }
-        case "choice": {
+        case "link": {
           const nextPart = parts.at(i + 1);
-          const postNewlines = nextPart?.type === "choice" ? "\n" : "\n\n";
+          const postNewlines = nextPart?.type === "link" ? "\n" : "\n\n";
           return `- [${part.text}](${part.target})${postNewlines}`;
         }
         case "condition":
@@ -374,19 +406,22 @@ export function storyToMermaid(story: Story): string {
   let ret = "flowchart TD\n";
   for (const section of story.sections) {
     const hasAction = section.parts.find((part) => part.type === "action");
-    const icon = hasAction ? " ⭐" : "";
+    const hasCondition = section.parts.find(
+      (part) => part.type === "condition"
+    );
+    const icons = `${hasAction ? " ⭐" : ""} ${hasCondition ? " ⎇" : ""}`;
 
-    ret = `${ret}    ${section.id}["${section.heading}${icon}"]\n`;
+    ret = `${ret}    ${section.id}["${section.heading}${icons}"]\n`;
     ret = `${ret}    click ${section.id} "#${section.id}"\n`;
     for (const part of section.parts) {
-      if (part.type === "choice") {
+      if (part.type === "link") {
         const target = part.target.replace(/^#/, "");
         ret = `${ret}    ${section.id} -->|"${part.text}"| ${target}\n`;
       }
       if (part.type === "condition") {
         const navigationPart = part.true?.find((part) =>
-          ["navigation", "choice"].includes(part.type)
-        ) as Navigation | Choice | undefined;
+          ["navigation", "link"].includes(part.type)
+        ) as Navigation | Link | undefined;
         if (navigationPart) {
           const target = navigationPart.target.replace(/^#/, "");
           ret = `${ret}    ${section.id} -.->|"${part.condition}"| ${target}\n`;
