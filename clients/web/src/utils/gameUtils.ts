@@ -237,12 +237,30 @@ function evaluateValue(value: string | number): string | number | undefined {
   }
 }
 
+export function buildStateQuery(state?: State): string {
+  if (!state) return "";
+  return `state=${btoa(JSON.stringify(state))}`;
+}
+
+export function parseStateQueryValue(query?: string): State {
+  if (!query) return {};
+  return JSON.parse(atob(query));
+}
+
 export function flatState(state: State): FlattenState {
   return flatten(state) as FlattenState;
 }
 
 export function unFlatState(state: Partial<FlattenState>): State {
   return unflatten(state) as State;
+}
+
+export function mergeStates(state?: State, newState?: State): State {
+  const flattenState = {
+    ...flatState(state ?? {}),
+    ...flatState(newState ?? {}),
+  };
+  return unFlatState(flattenState);
 }
 
 function omit<T extends Record<string, unknown>, K extends keyof T>(

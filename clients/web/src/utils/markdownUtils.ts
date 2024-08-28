@@ -319,7 +319,7 @@ export function sectionToMarkdown(section: Section): string {
 
 export function partsToMarkdown(parts: Part[]): string {
   return parts
-    .map((part) => {
+    .map((part, i) => {
       switch (part.type) {
         case "paragraph":
           return `${part.text}\n\n`;
@@ -331,8 +331,11 @@ export function partsToMarkdown(parts: Part[]): string {
             : "";
           return `${description}![${part.text}](${part.url})\n\n`;
         }
-        case "choice":
-          return `- [${part.text}](${part.target})\n`;
+        case "choice": {
+          const nextPart = parts.at(i + 1);
+          const postNewlines = nextPart?.type === "choice" ? "\n" : "\n\n";
+          return `- [${part.text}](${part.target})${postNewlines}`;
+        }
         case "condition":
           return conditionToMarkdown(part) + "\n\n";
         case "navigation":

@@ -6,7 +6,12 @@ import * as api from "../utils/api";
 import "./Game.css";
 import { ImagePart } from "./game/ImagePart";
 import { ButtonPart } from "./game/ButtonPart";
-import { parseSection } from "../utils/gameUtils";
+import {
+  buildStateQuery,
+  mergeStates,
+  parseSection,
+  parseStateQueryValue,
+} from "../utils/gameUtils";
 import { Header } from "./game/Header";
 
 type Props = {
@@ -87,7 +92,7 @@ export function Game(props: Props) {
   );
 
   const setHash = useCallback((sectionId: string, state: State = {}) => {
-    const hash = sectionId + "?state=" + btoa(JSON.stringify(state));
+    const hash = `${sectionId}?${buildStateQuery(state)}`;
     window.location.hash = hash;
   }, []);
 
@@ -117,7 +122,6 @@ export function Game(props: Props) {
             const voice =
               voices.find((v) => v.lang === "sv-SE") ??
               voices.find((v) => v.lang === "en-US");
-            console.log("utter", narratorText, utter);
             if (voice) {
               utter.lang = voice?.lang;
               utter.voice = voice;
@@ -142,12 +146,18 @@ export function Game(props: Props) {
     [story, section, useNarrator]
   );
 
-  const navigateToSection = useCallback(
+  const navigateHandler = useCallback(
     (id: string) => {
-      const sectionId = id.replace(/^#/, "");
-      const nextsection = story?.sections.find((c) => c.id === sectionId);
-      if (nextsection) {
-        setHash(id, state);
+      if (id.startsWith("#")) {
+        const sectionId = id.replace(/^#/, "");
+        const nextsection = story?.sections.find((c) => c.id === sectionId);
+        if (nextsection) {
+          setHash(id, state);
+        }
+      } else if (id.startsWith("/")) {
+        window.location.href = `${id}#?${buildStateQuery(state)}`;
+      } else {
+        window.location.href = id;
       }
     },
     [story, state, setHash]
@@ -157,7 +167,7 @@ export function Game(props: Props) {
     const [sectionId, stateJSON] = window.location.hash
       .substring(1)
       .split("?state=");
-    setNewsection(sectionId, stateJSON ? JSON.parse(atob(stateJSON)) : {});
+    setNewsection(sectionId, stateJSON ? parseStateQueryValue(stateJSON) : {});
   }, [setNewsection]);
 
   useEffect(() => {
@@ -173,11 +183,14 @@ export function Game(props: Props) {
     setStory(props.story);
   }
 
-  const sectionId = window.location.hash.substring(1);
+  const [sectionId, hashQuery] = window.location.hash.substring(1).split("?");
   if (!sectionId && props?.story?.sections[0]?.id) {
     const section = props.story?.sections[0]?.id;
-    const state = props.story?.state;
-    setHash(section, state);
+    const hashState = hashQuery
+      ? parseStateQueryValue(hashQuery.replace("state=", ""))
+      : undefined;
+    const newState = mergeStates(props.story?.state, hashState);
+    setHash(section, newState);
   }
 
   return (
@@ -204,9 +217,7 @@ export function Game(props: Props) {
             return <ImagePart key={i} part={part} />;
           }
           if (part.type === "choice" || part.type === "navigation") {
-            return (
-              <ButtonPart key={i} part={part} onClick={navigateToSection} />
-            );
+            return <ButtonPart key={i} part={part} onClick={navigateHandler} />;
           }
           if (part.type === "paragraph") {
             return (
