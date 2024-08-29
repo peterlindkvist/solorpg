@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { resolve } from "path";
 import react from "@vitejs/plugin-react";
 
 // https://vitejs.dev/config/
@@ -7,5 +8,14 @@ export default defineConfig({
   base: "/solorpg",
   server: {
     cors: true,
+    open: "/solorpg/game.html",
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, "index.html"),
+        game: resolve(__dirname, "game.html"),
+      },
+    },
   },
 });

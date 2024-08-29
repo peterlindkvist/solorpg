@@ -39,13 +39,13 @@ function App() {
 
   if (!bookName) {
     const url = new URL(window.location.href);
-    const [, folder, page, storyName, chapterName] = url.pathname.split("/");
+    const [, , page, storyName, chapterName] = url.pathname.split("/");
     if (
       !storyName ||
       !chapterName ||
       !["edit", "game", "images", "sections"].includes(page)
     ) {
-      window.location.href = `${folder}/game/help/introduction`;
+      fetchStory("help", "introduction");
     } else {
       fetchStory(storyName, chapterName);
       setPage(page as Page);

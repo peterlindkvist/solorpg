@@ -13,13 +13,12 @@ import {
   parseStateQueryValue,
 } from "../utils/gameUtils";
 import { Header } from "./game/Header";
-import { render } from "react-dom";
 import { ParagraphPart } from "./game/ParagraphPart";
 
 type Props = {
   storyId?: string;
   story?: Story;
-  exit: () => void;
+  exit?: () => void;
 };
 
 let recordInterval: NodeJS.Timeout | undefined;

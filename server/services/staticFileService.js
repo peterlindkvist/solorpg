@@ -3,8 +3,9 @@ const mime = require("mime-types");
 
 function getStaticFile(folder, filename, fallbackToIndex = false) {
   filename = filename === "/" ? "/index.html" : filename;
-  const path = `${folder}${filename}`;
-  console.log("path", path, fallbackToIndex, fs.existsSync(path));
+  const assetsFilename = filename.replace("/solorpg", "");
+  const path = `${folder}${assetsFilename}`;
+
   if (fs.existsSync(path)) {
     const content = fs.readFileSync(path);
     return {
@@ -13,7 +14,12 @@ function getStaticFile(folder, filename, fallbackToIndex = false) {
     };
   }
   if (fallbackToIndex) {
-    const content = fs.readFileSync(`${folder}/index.html`);
+    const file = filename.split("/")[2]?.startsWith("game")
+      ? "game.html"
+      : "index.html";
+
+    const content = fs.readFileSync(`${folder}/${file}`);
+
     return {
       content: content.toString(),
       mime: "text/html",

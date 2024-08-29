@@ -1,7 +1,7 @@
 import "./Header.css";
 
 type Props = {
-  exit: () => void;
+  exit?: () => void;
   setSound: (sound: boolean) => void;
   toggleVoice: () => void;
   sound: boolean;
@@ -11,7 +11,7 @@ type Props = {
 export function Header({ exit, setSound, toggleVoice, sound, voice }: Props) {
   return (
     <div className="game-header">
-      <a className="edit" href="#" onClick={() => exit()}>
+      <a className="edit" href="#" onClick={() => exit?.()}>
         ✎
       </a>
       <div className="game-settings">
