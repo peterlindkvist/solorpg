@@ -8,7 +8,7 @@ export default defineConfig({
   base: "/solorpg",
   server: {
     cors: true,
-    open: "/solorpg/game.html",
+    open: "/solorpg/game",
   },
   build: {
     rollupOptions: {

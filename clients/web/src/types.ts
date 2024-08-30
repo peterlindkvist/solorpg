@@ -40,8 +40,8 @@ export type Condition = {
   type: "condition";
   condition: string;
   text?: string;
-  true?: Part[];
-  false?: Part[];
+  true: Part[];
+  false: Part[];
   markdown?: string;
   error?: string;
 };

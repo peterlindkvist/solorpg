@@ -14,9 +14,17 @@ function getStaticFile(folder, filename, fallbackToIndex = false) {
     };
   }
   if (fallbackToIndex) {
-    const file = filename.split("/")[2]?.startsWith("game")
+    const file = assetsFilename.split("/")[1]?.startsWith("game")
       ? "game.html"
       : "index.html";
+
+    console.log(
+      "fallback to index",
+      folder,
+      filename,
+      file,
+      filename.split("/")
+    );
 
     const content = fs.readFileSync(`${folder}/${file}`);
 

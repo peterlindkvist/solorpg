@@ -40,8 +40,6 @@ function GameContainer() {
   return (
     <>
       <div className="game-container">
-        <h1> GAME </h1>
-
         <Game storyId={storyId} story={story} />
       </div>
     </>

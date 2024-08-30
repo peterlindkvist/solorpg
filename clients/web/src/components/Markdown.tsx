@@ -295,7 +295,7 @@ export function Markdown(props: Props) {
     return <div>Loading...</div>;
   }
 
-  const height = window.innerHeight - 200;
+  const height = window.innerHeight - 100;
 
   return (
     <div>

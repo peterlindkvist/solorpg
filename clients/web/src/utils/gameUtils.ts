@@ -40,6 +40,8 @@ export function parseSection(
         } else if (codePart.type === "navigation") {
           renderParts.push(codePart);
           break;
+        } else if (["image", "link"].includes(codePart.type)) {
+          renderParts.push(codePart);
         } else if (codePart.type === "action") {
           const { state, renderPart } = evaluateAction(
             codePart,
@@ -55,6 +57,8 @@ export function parseSection(
       renderParts.push(renderPart);
     }
   }
+
+  console.log("parseSection", { renderParts });
 
   const newState = omit(unFlatState(flatStateSettings), Object.keys(settings));
 

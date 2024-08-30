@@ -187,7 +187,7 @@ describe("markdownUtils", () => {
         ]);
       });
       test("condition one text", () => {
-        const codeMarkdown = "`1=1 {`\n text\n `}`";
+        const codeMarkdown = "`1=1 {`\n\n text\n\n `}`";
         const markdown = `### Header\n ${codeMarkdown}`;
         const story = parseMarkdown(markdown);
 
@@ -200,6 +200,27 @@ describe("markdownUtils", () => {
                 type: "condition",
                 condition: "1=1",
                 true: [{ type: "paragraph", text: "text" }],
+                false: [],
+              },
+            ],
+          },
+        ]);
+      });
+      test("condition else text", () => {
+        const codeMarkdown = "`1=1 {`\n\n text1\n\n`}:{`\n\ntext2\n\n`}`";
+        const markdown = `### Header\n ${codeMarkdown}`;
+        const story = parseMarkdown(markdown);
+
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "condition",
+                condition: "1=1",
+                true: [{ type: "paragraph", text: "text1" }],
+                false: [{ type: "paragraph", text: "text2" }],
               },
             ],
           },
@@ -222,6 +243,7 @@ describe("markdownUtils", () => {
                     state: { a: 1 },
                   },
                 ],
+                false: [],
               },
             ],
           },
@@ -246,6 +268,7 @@ describe("markdownUtils", () => {
                     state: { a: 1 },
                   },
                 ],
+                false: [],
               },
             ],
           },
@@ -264,6 +287,7 @@ describe("markdownUtils", () => {
                 type: "condition",
                 condition: "1=1",
                 true: [{ type: "paragraph", text: "text1" }],
+                false: [],
               },
               { type: "paragraph", text: "text2" },
             ],
@@ -283,13 +307,13 @@ describe("markdownUtils", () => {
                 type: "condition",
                 condition: "1=1",
                 true: [{ type: "paragraph", text: "text1" }],
+                false: [],
               },
               {
                 type: "condition",
                 condition: "2=2",
-                error: "No parts found in code block",
-                markdown: "`2=2{`",
                 true: [],
+                false: [],
               },
             ],
           },
@@ -311,6 +335,7 @@ describe("markdownUtils", () => {
                   { type: "paragraph", text: "text1" },
                   { type: "paragraph", text: "text2" },
                 ],
+                false: [],
               },
               { type: "paragraph", text: "text3" },
             ],
@@ -330,6 +355,7 @@ describe("markdownUtils", () => {
                 type: "condition",
                 condition: "1=1",
                 true: [{ type: "paragraph", text: "text1" }],
+                false: [],
               },
               { type: "paragraph", text: "text3" },
             ],
@@ -487,8 +513,31 @@ describe("markdownUtils", () => {
               text: "text",
             },
           ],
+          false: [],
         };
         const toEqual = "`[d6]<4 {`\n\ntext\n\n`}`\n\n";
+        const markdown = partsToMarkdown([part]);
+
+        expect(markdown).toEqual(toEqual);
+      });
+      test("with else", () => {
+        const part: Condition = {
+          type: "condition",
+          condition: "[d6]<4",
+          true: [
+            {
+              type: "paragraph",
+              text: "text1",
+            },
+          ],
+          false: [
+            {
+              type: "paragraph",
+              text: "text2",
+            },
+          ],
+        };
+        const toEqual = "`[d6]<4 {`\n\ntext1\n\n`}:{`\n\ntext2\n\n`}`\n\n";
         const markdown = partsToMarkdown([part]);
 
         expect(markdown).toEqual(toEqual);
@@ -504,6 +553,7 @@ describe("markdownUtils", () => {
               state,
             },
           ],
+          false: [],
         };
         const toEqual =
           "`[d6]<4 {`\n\n" +

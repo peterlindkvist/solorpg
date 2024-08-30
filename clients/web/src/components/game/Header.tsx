@@ -8,6 +8,9 @@ type Props = {
   voice: boolean;
 };
 
+const SHOW_VOICE = false;
+const SHOW_SOUND = false;
+
 export function Header({ exit, setSound, toggleVoice, sound, voice }: Props) {
   return (
     <div className="game-header">
@@ -15,26 +18,30 @@ export function Header({ exit, setSound, toggleVoice, sound, voice }: Props) {
         ✎
       </a>
       <div className="game-settings">
-        <div>
-          👂
-          <input
-            type="checkbox"
-            id="sound"
-            name="sound"
-            checked={sound}
-            onChange={() => setSound(!sound)}
-          />
-        </div>
-        <div>
-          👄
-          <input
-            type="checkbox"
-            id="voice"
-            name="voice"
-            checked={voice}
-            onChange={() => toggleVoice()}
-          />
-        </div>
+        {SHOW_SOUND && (
+          <div>
+            👂
+            <input
+              type="checkbox"
+              id="sound"
+              name="sound"
+              checked={sound}
+              onChange={() => setSound(!sound)}
+            />
+          </div>
+        )}
+        {SHOW_VOICE && (
+          <div>
+            👄
+            <input
+              type="checkbox"
+              id="voice"
+              name="voice"
+              checked={voice}
+              onChange={() => toggleVoice()}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

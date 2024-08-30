@@ -24,6 +24,8 @@ describe("gameUtils", () => {
       const condition: Condition = {
         type: "condition",
         condition: "4+[d1] < 4",
+        true: [],
+        false: [],
       };
       const { isTrue, renderPart } = evaluateCondition(condition, {});
       expect(renderPart.text).toEqual("4+[d1] < 4 -> 4+1<4 -> false");
@@ -33,6 +35,8 @@ describe("gameUtils", () => {
       const condition: Condition = {
         type: "condition",
         condition: "{strength} >= 12",
+        true: [],
+        false: [],
       };
       const { isTrue, renderPart } = evaluateCondition(condition, {
         strength: 14,
@@ -44,6 +48,8 @@ describe("gameUtils", () => {
       const condition: Condition = {
         type: "condition",
         condition: "{strength} <= [2d1+20]",
+        true: [],
+        false: [],
       };
       const { isTrue, renderPart } = evaluateCondition(condition, {
         strength: 14,

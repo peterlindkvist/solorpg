@@ -23,8 +23,6 @@ type Props = {
 
 let recordInterval: NodeJS.Timeout | undefined;
 
-const SHOW_HEADER_MENU = false;
-
 export function Game(props: Props) {
   const [story, setStory] = useState<Story>();
   const [section, setSection] = useState<Section>();
@@ -201,7 +199,7 @@ export function Game(props: Props) {
       className="game"
       style={isRecording ? { backgroundColor: "#ff000060" } : {}}
     >
-      {SHOW_HEADER_MENU && (
+      {props.exit && (
         <Header
           exit={props.exit}
           setSound={setUseNarrator}
