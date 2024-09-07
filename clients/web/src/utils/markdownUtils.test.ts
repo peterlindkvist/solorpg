@@ -11,6 +11,48 @@ import {
 
 describe("markdownUtils", () => {
   describe("parseMarkdown", () => {
+    describe("Introduction", () => {
+      test("simple introduction", () => {
+        const markdown = "# Header\n\n test\n\n ### Subheader";
+        const story = parseMarkdown(markdown);
+        console.dir(story, { depth: 100 });
+        expect(story.title).toEqual("Header");
+        expect(story.description).toEqual([
+          { type: "paragraph", text: "test" },
+        ]);
+        expect(story.sections).toEqual([
+          {
+            heading: "Subheader",
+            id: "subheader",
+            parts: [],
+          },
+        ]);
+      });
+      test.only("introduction with settings", () => {
+        const markdown =
+          '# Header\n\n test\n\n ```\n{\n"a": 2\n}\n``` \n\n ## Subheader';
+        const story = parseMarkdown(markdown);
+        console.dir(story, { depth: 100 });
+        expect(story.title).toEqual("Header");
+        expect(story.description).toEqual([
+          { type: "paragraph", text: "test" },
+        ]);
+        expect(story.settings).toEqual({ type: "action", state: { a: 2 } });
+        expect(story.sections).toEqual([
+          {
+            heading: "Subheader",
+            id: "subheader",
+            parts: [
+              {
+                type: "header",
+                text: "Subheader",
+              },
+            ],
+          },
+        ]);
+      });
+    });
+
     describe("Header", () => {
       test("empty", () => {
         const markdown = "### Header";
@@ -26,7 +68,7 @@ describe("markdownUtils", () => {
     });
     describe("Paragraph", () => {
       test("normal text", () => {
-        const markdown = `### Header\ntext`;
+        const markdown = `### Header\ntextA\n\ntextB1 textB2\ntestC1 testC2`;
         const story = parseMarkdown(markdown);
         expect(story.sections).toEqual([
           {
@@ -35,7 +77,11 @@ describe("markdownUtils", () => {
             parts: [
               {
                 type: "paragraph",
-                text: "text",
+                text: "textA",
+              },
+              {
+                type: "paragraph",
+                text: "textB1 textB2\ntestC1 testC2",
               },
             ],
           },
@@ -60,7 +106,7 @@ describe("markdownUtils", () => {
       });
 
       test("citation text", () => {
-        const markdown = `### Header\n - text`;
+        const markdown = `### Header\n\n - text`;
         const story = parseMarkdown(markdown);
         expect(story.sections).toEqual([
           {
@@ -95,7 +141,49 @@ describe("markdownUtils", () => {
           },
         ]);
       });
+      test("image with comment", () => {
+        const markdown = `### Header\n![imagetext](url)<!--- great image -->`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "image",
+                text: "imagetext",
+                url: "url",
+                description: "great image",
+              },
+            ],
+          },
+        ]);
+      });
+      test("2 images", () => {
+        const markdown = `### Header\n![imagetext](url)<!--- great image -->![imagetext2](url2)`;
+        const story = parseMarkdown(markdown);
+        expect(story.sections).toEqual([
+          {
+            heading: "Header",
+            id: "header",
+            parts: [
+              {
+                type: "image",
+                text: "imagetext",
+                url: "url",
+                description: "great image",
+              },
+              {
+                type: "image",
+                text: "imagetext2",
+                url: "url2",
+              },
+            ],
+          },
+        ]);
+      });
     });
+
     describe("Action", () => {
       test("Error", () => {
         const codeMarker = "```";
@@ -207,7 +295,8 @@ describe("markdownUtils", () => {
         ]);
       });
       test("condition else text", () => {
-        const codeMarkdown = "`1=1 {`\n\n text1\n\n`}:{`\n\ntext2\n\n`}`";
+        const codeMarkdown =
+          "`1=1 {`\n\n textA\ntextB\n\n`}:{`\n\ntext2\n\n`}`";
         const markdown = `### Header\n ${codeMarkdown}`;
         const story = parseMarkdown(markdown);
 
@@ -219,7 +308,7 @@ describe("markdownUtils", () => {
               {
                 type: "condition",
                 condition: "1=1",
-                true: [{ type: "paragraph", text: "text1" }],
+                true: [{ type: "paragraph", text: "textA\ntextB" }],
                 false: [{ type: "paragraph", text: "text2" }],
               },
             ],
@@ -286,9 +375,10 @@ describe("markdownUtils", () => {
               {
                 type: "condition",
                 condition: "1=1",
-                true: [{ type: "paragraph", text: "text1" }],
+                true: [],
                 false: [],
               },
+              { type: "paragraph", text: "text1" },
               { type: "paragraph", text: "text2" },
             ],
           },
@@ -298,6 +388,7 @@ describe("markdownUtils", () => {
       test("condition new condition", () => {
         const markdown = "### Header\n `1=1{`\n text1\n\n`2=2{`\n\n`}`";
         const story = parseMarkdown(markdown);
+
         expect(story.sections).toEqual([
           {
             heading: "Header",
@@ -306,9 +397,10 @@ describe("markdownUtils", () => {
               {
                 type: "condition",
                 condition: "1=1",
-                true: [{ type: "paragraph", text: "text1" }],
+                true: [],
                 false: [],
               },
+              { type: "paragraph", text: "text1" },
               {
                 type: "condition",
                 condition: "2=2",
@@ -323,6 +415,8 @@ describe("markdownUtils", () => {
       test("condition close end", () => {
         const markdown = "### Header\n `1=1{`\n text1\n\ntext2\n`}`\n\ntext3";
         const story = parseMarkdown(markdown);
+        console.dir(story.sections, { depth: 100 });
+
         expect(story.sections).toEqual([
           {
             heading: "Header",
@@ -376,8 +470,6 @@ describe("markdownUtils", () => {
                 type: "link",
                 text: "text",
                 target: "#url",
-                key: "text",
-                markdown: "[text](#url)",
               },
             ],
           },
@@ -569,8 +661,6 @@ describe("markdownUtils", () => {
       test("simple link", () => {
         const part: Link = {
           type: "link",
-          key: "text",
-          markdown: "[text](#url)",
           target: "#url",
           text: "text",
         };
@@ -583,15 +673,11 @@ describe("markdownUtils", () => {
       test("link list", () => {
         const part: Link = {
           type: "link",
-          key: "text",
-          markdown: "[text](#url)",
           target: "#url",
           text: "text",
         };
         const part2: Link = {
           type: "link",
-          key: "text2",
-          markdown: "[text2](#url2)",
           target: "#url2",
           text: "text2",
         };

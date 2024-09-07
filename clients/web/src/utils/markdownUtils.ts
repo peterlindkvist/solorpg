@@ -1,4 +1,4 @@
-import markdownit, { Token } from "markdown-it";
+import markdownit from "markdown-it";
 import anchor from "markdown-it-anchor";
 import json5 from "json5";
 import {
@@ -8,11 +8,9 @@ import {
   Condition,
   Image,
   Navigation,
-  Paragraph,
   Part,
-  Settings,
   Story,
-  State,
+  Paragraph,
 } from "../types";
 
 // default mode
@@ -26,29 +24,39 @@ type CodeData = {
   active: boolean;
   trueParts: Part[];
   falseParts: Part[];
-  token?: Token;
+  token?: SimpleToken;
   isTruePart: boolean;
 };
 
-function parseImage(token: Token): Image | undefined {
-  const image = token.children?.find((token) => token.type === "image");
-  if (image) {
-    const description = token.children
-      ?.find((token) => token.type === "text")
-      ?.content.replace(/<!---/, "")
-      .replace(/-->/, "")
-      .trim();
-    const url = image.attrs?.find(([key]) => key === "src")?.[1];
-    return {
-      type: "image",
-      text: image.content,
-      description: description,
-      url,
-    };
-  }
+function parseImage(
+  token: SimpleToken,
+  description?: string
+): Image | undefined {
+  return {
+    type: "image",
+    text: token.content,
+    url: token.attrs?.src ?? "",
+    ...(description ? { description } : undefined),
+  };
+
+  // const image = token.children?.find((token) => token.type === "image");
+  // if (image) {
+  //   const description = token.children
+  //     ?.find((token) => token.type === "text")
+  //     ?.content.replace(/<!---/, "")
+  //     .replace(/-->/, "")
+  //     .trim();
+  //   const url = image.attrs?.["src"];
+  //   return {
+  //     type: "image",
+  //     text: image.content,
+  //     description: description,
+  //     url,
+  //   };
+  // }
 }
 
-function parseNavigation(code: Token): Part | undefined {
+function parseNavigation(code: SimpleToken): Part | undefined {
   const navigationMatch = code.content.match(/^->\s?\[([^\]]*)\]\(([^)]*)\)/);
   if (navigationMatch) {
     return {
@@ -78,61 +86,162 @@ function parseActionPart(content: string): Action {
   }
 }
 
-function parseCodeToken(token?: Token): Part[] {
-  if (!token) {
-    return [];
-  }
-  const parts: Part[] = [];
-  for (const children of token?.children ?? []) {
-    switch (children.type) {
-      case "text": {
-        const part: Paragraph = {
-          type: "paragraph",
-          text: children.content,
-        };
-        parts.push(part);
-        break;
-      }
-    }
-  }
-  return parts;
-}
+// function parseCodeToken(token?: SimpleToken): Part[] {
+//   if (!token) {
+//     return [];
+//   }
+//   const parts: Part[] = [];
+//   for (const children of token?.children ?? []) {
+//     switch (children.type) {
+//       case "text": {
+//         const part: Paragraph = {
+//           type: "paragraph",
+//           text: children.content,
+//         };
+//         parts.push(part);
+//         break;
+//       }
+//     }
+//   }
+//   return parts;
+// }
 
-function parseCode(codeData: CodeData, endToken?: Token): Condition {
+function parseCode(codeData: CodeData): Condition {
   let error: string | undefined;
 
-  const condition = codeData.token?.children
-    ?.at(0)
-    ?.content.replace(/\s*\{\s*?$/, "");
+  const condition = codeData.token?.content.replace(/\s*\{\s*?$/, "");
 
   if (!condition) {
     error = "Could not parse condition";
   }
 
-  const startParts = parseCodeToken(codeData.token);
-  const endParts = parseCodeToken(endToken);
+  // const startParts = parseCodeToken(codeData.token);
+  // const endParts = parseCodeToken(endToken);
 
-  const trueParts = [
-    ...startParts,
-    ...codeData.trueParts,
-    ...(codeData.isTruePart ? endParts : []),
-  ];
-  const falseParts = [
-    ...codeData.falseParts,
-    ...(codeData.isTruePart ? [] : endParts),
-  ];
+  // const trueParts = [
+  //   ...startParts,
+  //   ...codeData.trueParts,
+  //   ...(codeData.isTruePart ? endParts : []),
+  // ];
+  // const falseParts = [
+  //   ...codeData.falseParts,
+  //   ...(codeData.isTruePart ? [] : endParts),
+  // ];
 
   return {
     type: "condition",
     condition: condition ?? "",
-    true: trueParts,
-    false: falseParts,
+    true: codeData.trueParts,
+    false: codeData.falseParts,
     ...(error ? { error, markdown: codeData.token?.content } : {}),
   };
 }
 
+type SimpleToken = {
+  type: string;
+  tag?: string;
+  content: string;
+  info?: string;
+  attrs?: Record<string, string>;
+  parentType?: string;
+  container: string[];
+  children?: SimpleToken[];
+};
+
+function markdownToSimpleTokens(markdown: string): SimpleToken[] {
+  const allTokens = md.parse(markdown, {});
+  const ret: SimpleToken[] = [];
+
+  const tokens = allTokens.filter((token) =>
+    [
+      "heading_open",
+      "heading_close",
+      "inline",
+      "fence",
+      "blockquote_open",
+      "blockquote_close",
+      "code_inline",
+      "image",
+      "text",
+      "link_open",
+      "link_close",
+      "list_item_open",
+      "list_item_close",
+    ].includes(token.type)
+  );
+
+  for (const token of tokens) {
+    const { type, tag, content, info, children } = token;
+    const tokenChildren: SimpleToken[] = [];
+
+    const simpleToken = {
+      type,
+      tag,
+      content,
+      info,
+      children: [],
+      container: [],
+    };
+    for (const child of children ?? []) {
+      tokenChildren.push({
+        type: child.type,
+        tag: child.tag,
+        content: child.content,
+        attrs: child.attrs?.reduce(
+          (acc, [key, value]) => ({ ...acc, [key]: value }),
+          {} as Record<string, string>
+        ),
+        info: child.info,
+        parentType: type,
+        container: [],
+      });
+    }
+    ret.push(simpleToken);
+    ret.push(...tokenChildren);
+  }
+
+  const container: string[] = [];
+  let tag: string | undefined;
+
+  for (const token of ret) {
+    if (token.type.endsWith("_open")) {
+      container.push(token.type);
+      tag = token.tag;
+    }
+
+    token.container = [...container];
+    token.tag = tag;
+
+    if (token.type.endsWith("_close")) {
+      container.pop();
+      tag = undefined;
+    }
+  }
+
+  return ret;
+}
+
+function isComment(text?: string): boolean {
+  return text?.startsWith("<!---") ?? false;
+}
+
+function parseComment(text: string): string {
+  return text
+    .replace(/^<!-{1,3}/, "")
+    .replace(/-->$/, "")
+    .trim();
+  // return text.replace("<!---", "").replace("-->", "").trim();
+}
+
+// function isCode(text?: string): boolean {
+//   return text?.startsWith("`") ?? false; //  && text?.endsWith("`")) ?? false;
+// }
+
 export function parseMarkdown(markdown: string): Story {
-  const tokens = md.parse(markdown, {});
+  // const tokens = md.parse(markdown, {});
+  const tokens = markdownToSimpleTokens(markdown);
+
+  console.table(tokens);
 
   const sections: Array<Section> = [];
   let section: Section = { parts: [] };
@@ -140,12 +249,11 @@ export function parseMarkdown(markdown: string): Story {
   let inBlockQuote = false;
   let inChapterIntro = false;
   let inBulletList = false;
+  let inLink: Link | undefined;
+  let inParagraph: Paragraph | undefined;
   let storyName = "";
-  let settings: Action<Settings & State> = {
-    type: "action",
-    state: { author: "" },
-  };
-  let storyDescription: string | undefined;
+
+  const storyDescription: Part[] = [];
 
   const inCode: CodeData = {
     active: false,
@@ -154,11 +262,20 @@ export function parseMarkdown(markdown: string): Story {
     falseParts: [],
   };
 
+  let skipNext = false;
+
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
+    const nextToken = tokens[i + 1];
     let part: Part | undefined;
 
-    if (!token) continue;
+    if (!token) {
+      continue;
+    }
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
 
     if (token.type === "heading_open") {
       inHeading = token.tag;
@@ -183,9 +300,122 @@ export function parseMarkdown(markdown: string): Story {
     if (token.type === "list_item_close") {
       inBulletList = false;
     }
-    if (token.type === "inline") {
-      const image = token.children?.find((token) => token.type === "image");
-      const link = token.children?.find((token) => token.type === "link_open");
+    if (token.type === "link_open") {
+      inLink = {
+        type: "link",
+        text: "",
+        target: token.attrs?.["href"] ?? "",
+      };
+    }
+    if (token.type === "link_close") {
+      part = inLink;
+      inLink = undefined;
+    }
+
+    if (token.type === "text") {
+      if (token.container.includes("heading_open")) {
+        console.log("****heading", token);
+        if (token.tag === "h1") {
+          storyName = token.content;
+          // storyDescription = `${storyDescription ?? ""}${token.content}\n\n`;
+        } else {
+          const heading = token.content.replace(/<!---.*-->/, "").trim();
+          section.heading = heading;
+          section.id = encodeURIComponent(
+            heading.toLowerCase().replace(/ /g, "-")
+          );
+          if (token.tag === "h2") {
+            part = {
+              type: "header",
+              text: heading,
+            };
+          }
+        }
+      } else if (inLink) {
+        inLink.text = token.content;
+      } else {
+        if (inParagraph) {
+          inParagraph.text += token.content;
+        } else {
+          inParagraph = {
+            type: "paragraph",
+            text: token.content,
+            ...(inBlockQuote || inBulletList
+              ? {
+                  variant: inBlockQuote ? "blockquote" : "citation",
+                }
+              : {}),
+          };
+        }
+      }
+    } else if (token.type === "image") {
+      let description: string | undefined;
+      if (isComment(nextToken?.content)) {
+        skipNext = true;
+        description = parseComment(nextToken?.content);
+      }
+      part = parseImage(token, description);
+    } else if (token.type === "softbreak") {
+      if (inParagraph && nextToken?.type === "text") {
+        inParagraph.text += "\n";
+      }
+    } else if (token.type === "fence" && token.info !== "mermaid") {
+      part = parseActionPart(token.content);
+    } else if (token.type === "code_inline") {
+      const navigation = parseNavigation(token);
+      if (navigation) {
+        part = navigation;
+      } else {
+        const isMiddle = token.content === "}:{";
+        const isStart = isMiddle ? false : token.content.endsWith("{");
+        const isEnd = isMiddle ? false : token.content.endsWith("}");
+        const remainingTokens = tokens.slice(i + 1);
+
+        const nextCode = remainingTokens.find(
+          (rt) => rt.type === "code_inline"
+        );
+        const nextCodeIsStart =
+          (nextCode?.content.endsWith("{") && nextCode?.content !== "}:{") ??
+          false;
+
+        // console.log("****code", {
+        //   isStart,
+        //   isMiddle,
+        //   isEnd,
+        //   inCode,
+        //   nextCode,
+        //   nextCodeIsStart,
+        //   token,
+        // });
+        if (isStart) {
+          inCode.active = true;
+          inCode.isTruePart = true;
+          inCode.trueParts = [];
+          inCode.falseParts = [];
+          inCode.token = token;
+        }
+        if (isMiddle) {
+          inCode.isTruePart = false;
+        }
+        if (isEnd || !nextCode || nextCodeIsStart) {
+          inCode.active = false;
+          part = parseCode(inCode);
+        }
+      }
+    }
+
+    if (inParagraph && !nextToken) {
+      part = inParagraph;
+      inParagraph = undefined;
+    }
+
+    if (inParagraph && !["text", "softbreak"].includes(nextToken.type)) {
+      part = inParagraph;
+      inParagraph = undefined;
+    }
+
+    const useInline = false;
+    if (token.type === "inline" && useInline) {
       const code = token.children?.find(
         (token) => token.type === "code_inline"
       );
@@ -212,15 +442,6 @@ export function parseMarkdown(markdown: string): Story {
               nextCode?.children?.at(0)?.content !== "}:{") ??
             false;
 
-          // console.log("****code", {
-          //   isStart,
-          //   isMiddle,
-          //   isEnd,
-          //   inCode,
-          //   nextCode,
-          //   nextCodeIsStart,
-          //   // token,
-          // });
           if (isStart) {
             inCode.active = true;
             inCode.isTruePart = true;
@@ -233,30 +454,8 @@ export function parseMarkdown(markdown: string): Story {
           }
           if (isEnd || !nextCode || nextCodeIsStart) {
             inCode.active = false;
-            part = parseCode(inCode, isStart ? undefined : token);
+            part = parseCode(inCode);
           }
-        }
-      } else if (image) {
-        part = parseImage(token);
-      } else if (link && token.children) {
-        const text = token.children
-          .filter((token) => token.type === "text")
-          .map((token) => token.content)
-          .join("");
-        const linkOpenIndex =
-          token.children.findIndex((token) => token.type === "link_open") ?? 0;
-        const key = token.children[linkOpenIndex + 1]?.content.toLowerCase();
-        const target = link.attrs
-          ?.find(([key]) => key === "href")?.[1]
-          ?.replace("", "");
-        if (text && target) {
-          part = {
-            type: "link",
-            text,
-            target,
-            key,
-            markdown: token.content,
-          };
         }
       } else {
         if (inHeading) {
@@ -275,7 +474,7 @@ export function parseMarkdown(markdown: string): Story {
             };
           }
         } else {
-          if (token.content.startsWith("<!--")) {
+          if (isComment(token.content)) {
             if (token.content !== mermaidComment && !inHeading) {
               part = {
                 type: "comment",
@@ -287,9 +486,9 @@ export function parseMarkdown(markdown: string): Story {
             }
           } else {
             if (inChapterIntro) {
-              storyDescription = `${storyDescription ?? ""}${
-                token.content
-              }\n\n`;
+              // storyDescription = `${storyDescription ?? ""}${
+              //   token.content
+              // }\n\n`;
             } else {
               part = {
                 type: "paragraph",
@@ -305,27 +504,34 @@ export function parseMarkdown(markdown: string): Story {
         }
       }
     }
-    if (token.type === "fence" && token.info !== "mermaid") {
-      part = parseActionPart(token.content);
-      if (inChapterIntro) {
-        settings = part;
-      }
-    }
 
-    if (part && !inChapterIntro) {
-      if (inCode.active) {
-        inCode.isTruePart
-          ? inCode.trueParts.push(part)
-          : inCode.falseParts.push(part);
+    console.log("****part", storyDescription, storyName);
+
+    if (part) {
+      if (inChapterIntro) {
+        storyDescription.push(part);
       } else {
-        section.parts.push(part);
+        if (inCode.active) {
+          inCode.isTruePart
+            ? inCode.trueParts.push(part)
+            : inCode.falseParts.push(part);
+        } else {
+          section.parts.push(part);
+        }
       }
     }
   }
 
+  const settings = (storyDescription.find(
+    (part) => part.type === "action"
+  ) as Action) ?? {
+    type: "action",
+    state: { author: "" },
+  };
+
   return {
     title: storyName ?? "",
-    description: storyDescription,
+    description: storyDescription.filter((part) => part.type !== "action"),
     markdown: markdown,
     sections,
     images: findImages(sections),
@@ -362,7 +568,9 @@ export function storyToMarkdown(story: Story): string {
 export function introToMarkdown(story: Story): string {
   const title = `# ${story.title || "???????"}\n\n`;
   const settings = actionToMarkdown(story.settings);
-  const description = story.description ? `${story.description}` : "";
+  const description = story.description
+    ? partsToMarkdown(story.description)
+    : "";
   return `${title}${description}${settings}`;
 }
 

@@ -9,8 +9,6 @@ export type Link = {
   type: "link";
   text: string;
   target: string;
-  key: string;
-  markdown: string;
 };
 
 export type Image = {
@@ -97,7 +95,7 @@ export type State = Record<
 
 export type Story = {
   title: string;
-  description?: string;
+  description?: Part[];
   markdown: string;
   sections: Section[];
   images: Image[];
