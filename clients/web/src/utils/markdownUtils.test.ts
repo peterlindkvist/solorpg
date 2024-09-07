@@ -15,7 +15,6 @@ describe("markdownUtils", () => {
       test("simple introduction", () => {
         const markdown = "# Header\n\n test\n\n ### Subheader";
         const story = parseMarkdown(markdown);
-        console.dir(story, { depth: 100 });
         expect(story.title).toEqual("Header");
         expect(story.description).toEqual([
           { type: "paragraph", text: "test" },
@@ -28,11 +27,10 @@ describe("markdownUtils", () => {
           },
         ]);
       });
-      test.only("introduction with settings", () => {
+      test("introduction with settings", () => {
         const markdown =
           '# Header\n\n test\n\n ```\n{\n"a": 2\n}\n``` \n\n ## Subheader';
         const story = parseMarkdown(markdown);
-        console.dir(story, { depth: 100 });
         expect(story.title).toEqual("Header");
         expect(story.description).toEqual([
           { type: "paragraph", text: "test" },
@@ -415,7 +413,6 @@ describe("markdownUtils", () => {
       test("condition close end", () => {
         const markdown = "### Header\n `1=1{`\n text1\n\ntext2\n`}`\n\ntext3";
         const story = parseMarkdown(markdown);
-        console.dir(story.sections, { depth: 100 });
 
         expect(story.sections).toEqual([
           {
@@ -487,15 +484,11 @@ describe("markdownUtils", () => {
                 type: "link",
                 text: "text",
                 target: "#url",
-                key: "text",
-                markdown: "[text](#url)",
               },
               {
                 type: "link",
                 text: "text2",
                 target: "#url2",
-                key: "text2",
-                markdown: "[text2](#url2)",
               },
             ],
           },
@@ -514,8 +507,6 @@ describe("markdownUtils", () => {
                 type: "link",
                 text: "text",
                 target: "#url",
-                key: "text",
-                markdown: "[text](#url)",
               },
               { type: "paragraph", text: "text2" },
             ],

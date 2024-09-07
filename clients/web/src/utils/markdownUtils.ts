@@ -38,22 +38,6 @@ function parseImage(
     url: token.attrs?.src ?? "",
     ...(description ? { description } : undefined),
   };
-
-  // const image = token.children?.find((token) => token.type === "image");
-  // if (image) {
-  //   const description = token.children
-  //     ?.find((token) => token.type === "text")
-  //     ?.content.replace(/<!---/, "")
-  //     .replace(/-->/, "")
-  //     .trim();
-  //   const url = image.attrs?.["src"];
-  //   return {
-  //     type: "image",
-  //     text: image.content,
-  //     description: description,
-  //     url,
-  //   };
-  // }
 }
 
 function parseNavigation(code: SimpleToken): Part | undefined {
@@ -86,26 +70,6 @@ function parseActionPart(content: string): Action {
   }
 }
 
-// function parseCodeToken(token?: SimpleToken): Part[] {
-//   if (!token) {
-//     return [];
-//   }
-//   const parts: Part[] = [];
-//   for (const children of token?.children ?? []) {
-//     switch (children.type) {
-//       case "text": {
-//         const part: Paragraph = {
-//           type: "paragraph",
-//           text: children.content,
-//         };
-//         parts.push(part);
-//         break;
-//       }
-//     }
-//   }
-//   return parts;
-// }
-
 function parseCode(codeData: CodeData): Condition {
   let error: string | undefined;
 
@@ -114,19 +78,6 @@ function parseCode(codeData: CodeData): Condition {
   if (!condition) {
     error = "Could not parse condition";
   }
-
-  // const startParts = parseCodeToken(codeData.token);
-  // const endParts = parseCodeToken(endToken);
-
-  // const trueParts = [
-  //   ...startParts,
-  //   ...codeData.trueParts,
-  //   ...(codeData.isTruePart ? endParts : []),
-  // ];
-  // const falseParts = [
-  //   ...codeData.falseParts,
-  //   ...(codeData.isTruePart ? [] : endParts),
-  // ];
 
   return {
     type: "condition",
@@ -230,25 +181,14 @@ function parseComment(text: string): string {
     .replace(/^<!-{1,3}/, "")
     .replace(/-->$/, "")
     .trim();
-  // return text.replace("<!---", "").replace("-->", "").trim();
 }
 
-// function isCode(text?: string): boolean {
-//   return text?.startsWith("`") ?? false; //  && text?.endsWith("`")) ?? false;
-// }
-
 export function parseMarkdown(markdown: string): Story {
-  // const tokens = md.parse(markdown, {});
   const tokens = markdownToSimpleTokens(markdown);
-
-  console.table(tokens);
 
   const sections: Array<Section> = [];
   let section: Section = { parts: [] };
-  let inHeading: string | undefined;
-  let inBlockQuote = false;
   let inChapterIntro = false;
-  let inBulletList = false;
   let inLink: Link | undefined;
   let inParagraph: Paragraph | undefined;
   let storyName = "";
@@ -278,28 +218,15 @@ export function parseMarkdown(markdown: string): Story {
     }
 
     if (token.type === "heading_open") {
-      inHeading = token.tag;
       inChapterIntro = token.tag === "h1";
       section = { parts: [] };
     }
     if (token.type === "heading_close") {
-      inHeading = undefined;
       if (!inChapterIntro) {
         sections.push(section);
       }
     }
-    if (token.type === "blockquote_open") {
-      inBlockQuote = true;
-    }
-    if (token.type === "blockquote_close") {
-      inBlockQuote = false;
-    }
-    if (token.type === "list_item_open") {
-      inBulletList = true;
-    }
-    if (token.type === "list_item_close") {
-      inBulletList = false;
-    }
+
     if (token.type === "link_open") {
       inLink = {
         type: "link",
@@ -314,10 +241,8 @@ export function parseMarkdown(markdown: string): Story {
 
     if (token.type === "text") {
       if (token.container.includes("heading_open")) {
-        console.log("****heading", token);
         if (token.tag === "h1") {
           storyName = token.content;
-          // storyDescription = `${storyDescription ?? ""}${token.content}\n\n`;
         } else {
           const heading = token.content.replace(/<!---.*-->/, "").trim();
           section.heading = heading;
@@ -337,6 +262,8 @@ export function parseMarkdown(markdown: string): Story {
         if (inParagraph) {
           inParagraph.text += token.content;
         } else {
+          const inBlockQuote = token.container.includes("blockquote_open");
+          const inBulletList = token.container.includes("list_item_open");
           inParagraph = {
             type: "paragraph",
             text: token.content,
@@ -413,99 +340,6 @@ export function parseMarkdown(markdown: string): Story {
       part = inParagraph;
       inParagraph = undefined;
     }
-
-    const useInline = false;
-    if (token.type === "inline" && useInline) {
-      const code = token.children?.find(
-        (token) => token.type === "code_inline"
-      );
-
-      if (code) {
-        const navigation = parseNavigation(code);
-        if (navigation) {
-          part = navigation;
-        } else {
-          const isMiddle = token.children?.at(0)?.content === "}:{";
-          const isStart = isMiddle
-            ? false
-            : token.children?.at(0)?.content.endsWith("{");
-          const isEnd = isMiddle
-            ? false
-            : token.children?.at(-1)?.content.endsWith("}");
-          const remainingTokens = tokens.slice(i + 1);
-
-          const nextCode = remainingTokens.find((rt) =>
-            rt.children?.find((t) => t.type === "code_inline")
-          );
-          const nextCodeIsStart =
-            (nextCode?.children?.at(0)?.content.endsWith("{") &&
-              nextCode?.children?.at(0)?.content !== "}:{") ??
-            false;
-
-          if (isStart) {
-            inCode.active = true;
-            inCode.isTruePart = true;
-            inCode.trueParts = [];
-            inCode.falseParts = [];
-            inCode.token = token;
-          }
-          if (isMiddle) {
-            inCode.isTruePart = false;
-          }
-          if (isEnd || !nextCode || nextCodeIsStart) {
-            inCode.active = false;
-            part = parseCode(inCode);
-          }
-        }
-      } else {
-        if (inHeading) {
-          if (inChapterIntro) {
-            storyName = token.content;
-          }
-          const heading = token.content.replace(/<!---.*-->/, "").trim();
-          section.heading = heading;
-          section.id = encodeURIComponent(
-            heading.toLowerCase().replace(/ /g, "-")
-          );
-          if (inHeading === "h2") {
-            part = {
-              type: "header",
-              text: heading,
-            };
-          }
-        } else {
-          if (isComment(token.content)) {
-            if (token.content !== mermaidComment && !inHeading) {
-              part = {
-                type: "comment",
-                text: token.content
-                  .replace(/^<!-{1,3}/, "")
-                  .replace(/-->$/, "")
-                  .trim(),
-              };
-            }
-          } else {
-            if (inChapterIntro) {
-              // storyDescription = `${storyDescription ?? ""}${
-              //   token.content
-              // }\n\n`;
-            } else {
-              part = {
-                type: "paragraph",
-                text: token.content,
-                ...(inBlockQuote || inBulletList
-                  ? {
-                      variant: inBlockQuote ? "blockquote" : "citation",
-                    }
-                  : {}),
-              };
-            }
-          }
-        }
-      }
-    }
-
-    console.log("****part", storyDescription, storyName);
 
     if (part) {
       if (inChapterIntro) {
