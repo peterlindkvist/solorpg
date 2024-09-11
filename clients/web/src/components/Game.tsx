@@ -79,7 +79,7 @@ export function Game(props: Props) {
       const spokenText = ret.text.toLowerCase();
       const links: Link[] =
         (section?.parts.filter((p) => p.type === "link") as Link[]) ?? [];
-      const found = links.find((c) => spokenText.includes(c.key));
+      const found = links.find((c) => spokenText === c.text.toLowerCase());
 
       if (found) {
         setSection(story?.sections.find((c) => c.id === found.target));
@@ -87,7 +87,7 @@ export function Game(props: Props) {
         recordUserVoice();
       }
     },
-    [story, section, recordUserVoice]
+    [story, section, recordUserVoice, props.storyId]
   );
 
   const setHash = useCallback((sectionId: string, state: State = {}) => {
@@ -142,7 +142,7 @@ export function Game(props: Props) {
         }
       }
     },
-    [story, section, useNarrator]
+    [story, section, useNarrator, isLoadingNarrator]
   );
 
   const navigateHandler = useCallback(

@@ -85,6 +85,18 @@ describe("gameUtils", () => {
       expect(renderPart.text).toEqual("rope: 1 -> 3");
     });
 
+    test("simple increase action from string", () => {
+      const action: Action = {
+        type: "action",
+        state: {
+          rope: "+=2",
+        },
+      };
+      const { state, renderPart } = evaluateAction(action, { rope: "1" });
+      expect(state).toEqual({ rope: 3 });
+      expect(renderPart.text).toEqual("rope: 1 -> 3");
+    });
+
     test("simple decrease action", () => {
       const action: Action = {
         type: "action",
@@ -109,6 +121,16 @@ describe("gameUtils", () => {
       const { state, renderPart } = evaluateAction(action, { egg: 3, milk: 1 });
       expect(state).toEqual({ pancakes: 1, egg: 2, milk: 0 });
       expect(renderPart.text).toEqual("pancakes: 1, egg: 3 -> 2, milk: 1 -> 0");
+    });
+
+    test("action with dice adn variable", () => {
+      const action: Action = {
+        type: "action",
+        state: { rollVarableD1: "[{strength}d1]" },
+      };
+      const { state, renderPart } = evaluateAction(action, { strength: 1 });
+      expect(state).toEqual({ rollVarableD1: 1, strength: 1 });
+      expect(renderPart.text).toEqual("rollVarableD1: [1]-> 1");
     });
 
     test("evaluate calculation states", () => {
@@ -184,7 +206,7 @@ describe("gameUtils", () => {
       expect(renderPart.text).toEqual("fruit: [1]-> apple");
     });
 
-    test.only("evaluate with object table and variable", () => {
+    test("evaluate with object table and variable", () => {
       const action: Action = {
         type: "action",
         state: {

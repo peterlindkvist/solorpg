@@ -103,23 +103,25 @@ function markdownToSimpleTokens(markdown: string): SimpleToken[] {
   const allTokens = md.parse(markdown, {});
   const ret: SimpleToken[] = [];
 
-  const tokens = allTokens.filter((token) =>
-    [
-      "heading_open",
-      "heading_close",
-      "inline",
-      "fence",
-      "blockquote_open",
-      "blockquote_close",
-      "code_inline",
-      "image",
-      "text",
-      "link_open",
-      "link_close",
-      "list_item_open",
-      "list_item_close",
-    ].includes(token.type)
-  );
+  const tokens = allTokens;
+
+  // const tokens = allTokens.filter((token) =>
+  //   [
+  //     "heading_open",
+  //     "heading_close",
+  //     "inline",
+  //     "fence",
+  //     "blockquote_open",
+  //     "blockquote_close",
+  //     "code_inline",
+  //     "image",
+  //     "text",
+  //     "link_open",
+  //     "link_close",
+  //     "list_item_open",
+  //     "list_item_close",
+  //   ].includes(token.type)
+  // );
 
   for (const token of tokens) {
     const { type, tag, content, info, children } = token;
@@ -173,7 +175,7 @@ function markdownToSimpleTokens(markdown: string): SimpleToken[] {
 }
 
 function isComment(text?: string): boolean {
-  return text?.startsWith("<!---") ?? false;
+  return text?.startsWith("<!--") ?? false;
 }
 
 function parseComment(text: string): string {
@@ -262,17 +264,29 @@ export function parseMarkdown(markdown: string): Story {
         if (inParagraph) {
           inParagraph.text += token.content;
         } else {
-          const inBlockQuote = token.container.includes("blockquote_open");
-          const inBulletList = token.container.includes("list_item_open");
-          inParagraph = {
-            type: "paragraph",
-            text: token.content,
-            ...(inBlockQuote || inBulletList
-              ? {
-                  variant: inBlockQuote ? "blockquote" : "citation",
-                }
-              : {}),
-          };
+          if (isComment(token.content)) {
+            if (
+              token.content !== mermaidComment &&
+              !token.container.includes("heading_open")
+            ) {
+              part = {
+                type: "comment",
+                text: parseComment(token.content),
+              };
+            }
+          } else {
+            const inBlockQuote = token.container.includes("blockquote_open");
+            const inBulletList = token.container.includes("list_item_open");
+            inParagraph = {
+              type: "paragraph",
+              text: token.content,
+              ...(inBlockQuote || inBulletList
+                ? {
+                    variant: inBlockQuote ? "blockquote" : "citation",
+                  }
+                : {}),
+            };
+          }
         }
       }
     } else if (token.type === "image") {
@@ -293,7 +307,7 @@ export function parseMarkdown(markdown: string): Story {
       if (navigation) {
         part = navigation;
       } else {
-        const isMiddle = token.content === "}:{";
+        const isMiddle = token.content.replace(/\s/g, "").match(/\}:\{/);
         const isStart = isMiddle ? false : token.content.endsWith("{");
         const isEnd = isMiddle ? false : token.content.endsWith("}");
         const remainingTokens = tokens.slice(i + 1);
@@ -302,10 +316,11 @@ export function parseMarkdown(markdown: string): Story {
           (rt) => rt.type === "code_inline"
         );
         const nextCodeIsStart =
-          (nextCode?.content.endsWith("{") && nextCode?.content !== "}:{") ??
-          false;
+          nextCode?.content.endsWith("{") &&
+          !nextCode?.content.replace(/\s/g, "").match(/\}:\{/);
 
         // console.log("****code", {
+        //   trim: token.content.replace(/\w/g, ""),
         //   isStart,
         //   isMiddle,
         //   isEnd,
@@ -360,7 +375,13 @@ export function parseMarkdown(markdown: string): Story {
     (part) => part.type === "action"
   ) as Action) ?? {
     type: "action",
-    state: { author: "" },
+    state: {
+      author: "",
+      assistant: {
+        imageContext: "",
+        textContext: "",
+      },
+    },
   };
 
   return {
@@ -479,11 +500,12 @@ function conditionToMarkdown(code: Condition): string {
 export function storyToMermaid(story: Story): string {
   let ret = "flowchart TD\n";
   for (const section of story.sections) {
-    const hasAction = section.parts.find((part) => part.type === "action");
-    const hasCondition = section.parts.find(
-      (part) => part.type === "condition"
-    );
-    const icons = `${hasAction ? " ⭐" : ""} ${hasCondition ? " ⎇" : ""}`;
+    const action = section.parts.find((part) => part.type === "action");
+    const image = section.parts.find((part) => part.type === "image");
+    const condition = section.parts.find((part) => part.type === "condition");
+    const icons = `${action ? " ⭐" : ""} ${condition ? " ⎇" : ""} ${
+      image ? " 🖼" : ""
+    }`;
 
     ret = `${ret}    ${section.id}["${section.heading}${icons}"]\n`;
     ret = `${ret}    click ${section.id} "#${section.id}"\n`;

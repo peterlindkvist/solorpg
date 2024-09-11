@@ -28,9 +28,10 @@ async function solorpg(req, res) {
   if (req.path.startsWith("/api/stories")) {
     if (req.method === "GET") {
       const filePath = req.path.replace("/api/stories/", "");
+      console.log("GET story", filePath);
       let content = await fetchTextFromStorage(filePath);
       if (!content) {
-        content = storyTemplate(filePath.split("/").pop());
+        content = await fetchTextFromStorage(`help/default.md`);
       }
       res.send(content);
       return;

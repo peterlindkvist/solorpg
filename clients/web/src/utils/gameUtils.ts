@@ -58,8 +58,6 @@ export function parseSection(
     }
   }
 
-  console.log("parseSection", { renderParts });
-
   const newState = omit(unFlatState(flatStateSettings), Object.keys(settings));
 
   return {
@@ -93,7 +91,6 @@ export function evaluateAction(
     ...Object.fromEntries(Object.keys(action.state).map((key) => [key, 0])),
     ...flattenState,
   };
-  withMissingKeys;
   const texts: string[] = [];
   const actionFlatState = flatState(action.state);
 
@@ -116,7 +113,6 @@ export function evaluateAction(
           texts.push(`${key}: ${text}`);
         }
       }
-
       return [key, newValue];
     })
   );
@@ -135,6 +131,15 @@ export function evaluateCondition(
   const withRolledDices = rollDices(noSpace);
   const newValue = evaluateValue(withRolledDices.value);
   const text = `${condition.condition} -> ${withRolledDices.value} -> ${newValue}`;
+
+  // console.log("evaluateCondition", {
+  //   withState,
+  //   noSpace,
+  //   withRolledDices,
+  //   newValue,
+  //   state,
+  // });
+
   return {
     isTrue: !!newValue,
     renderPart: { ...condition, text },
@@ -153,6 +158,7 @@ function evaluateActionValue(
   const withRolledDices = rollDices(noSpace);
   const newValue = evaluateValue(withRolledDices.value) ?? oldValue;
   const withState2 = replaceWithState(`${newValue}`, state);
+  const correctType = toNumberForNumbers(withState2);
 
   // console.log("evaluateActionValue", {
   //   oldValue,
@@ -161,11 +167,21 @@ function evaluateActionValue(
   //   noSpace,
   //   withRolledDices,
   //   newValue,
+  //   correctType,
+  //   state,
   // });
   return {
-    value: withState2,
+    value: correctType,
     ...(withRolledDices ? { rolls: withRolledDices.rolls } : {}),
   };
+}
+
+function toNumberForNumbers(value: string): string | number {
+  if (value === Number.parseFloat(value).toString()) {
+    return Number.parseFloat(value);
+  } else {
+    return value;
+  }
 }
 
 function replacePrefix(key: string, value: string | number): string {
@@ -185,7 +201,7 @@ function replacePrefix(key: string, value: string | number): string {
 export function replaceWithState(text: string, state: FlattenState): string {
   let ret = text;
   for (const [key, value] of Object.entries(state)) {
-    if (value ?? false) {
+    if (value !== undefined) {
       ret = ret.replaceAll(`{${key}}`, value.toString());
     }
   }
@@ -199,16 +215,26 @@ function rollDices(value: string): { value: string; rolls?: string } {
   }
   const ret = { value, rolls: "" };
   for (const match of diceMatches) {
-    const roll = new DiceRoll(match[1]);
-    const endStart = (match.index ?? 0) + match[1].length + 2;
+    try {
+      const roll = new DiceRoll(match[1]);
+      const endStart = (match.index ?? 0) + match[1].length + 2;
 
-    return {
-      value:
-        ret.value.substring(0, match.index) +
-        roll.total.toString() +
-        ret.value.substring(endStart),
-      rolls: ret.rolls + roll.rolls.toString(),
-    };
+      return {
+        value:
+          ret.value.substring(0, match.index) +
+          roll.total.toString() +
+          ret.value.substring(endStart),
+        rolls: ret.rolls + roll.rolls.toString(),
+      };
+    } catch (_error) {
+      const error =
+        _error instanceof Error ? _error : new Error("unknown error");
+
+      return {
+        value,
+        rolls: error.message,
+      };
+    }
   }
   return ret;
 }
