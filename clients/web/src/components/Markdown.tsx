@@ -1,16 +1,19 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./Markdown.css";
 import MDEditor, {
   commands,
   getExtraCommands,
   selectWord,
 } from "@uiw/react-md-editor";
-import { onImagePasted, randomid } from "./markdown/editorUtils";
+import { onImagePasted } from "./markdown/editorUtils";
 import * as api from "../utils/api";
 import { Page, Story } from "../types";
 import * as soloapi from "../utils/api";
-import { parseMarkdown, storyToMarkdown } from "../utils/markdownUtils";
-import { getCodeString } from "rehype-rewrite";
+import {
+  parseMarkdown,
+  storyToMarkdown,
+  storyToMermaid,
+} from "../utils/markdownUtils";
 import mermaid from "mermaid";
 
 type Props = {
@@ -21,56 +24,6 @@ type Props = {
 };
 
 mermaid.initialize({ securityLevel: "loose" });
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Code = (props: any) => {
-  const demoid = useRef(`dome${randomid()}`);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [container, setContainer] = useState<any>(null);
-  const isMermaid =
-    props.className &&
-    /^language-mermaid/.test(props.className.toLocaleLowerCase());
-  const code = props.children
-    ? getCodeString(props.node.children)
-    : props.children?.[0] || "";
-
-  useEffect(() => {
-    if (container && isMermaid && demoid.current && code) {
-      mermaid
-        .render(demoid.current, code)
-        .then(({ svg, bindFunctions }) => {
-          container.innerHTML = svg;
-          if (bindFunctions) {
-            bindFunctions(container);
-          }
-        })
-        .catch((error) => {
-          console.log("error:", error);
-        });
-    }
-  }, [container, isMermaid, code, demoid]);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const refElement = useCallback((node: any) => {
-    if (node !== null) {
-      setContainer(node);
-    }
-  }, []);
-
-  if (isMermaid) {
-    return (
-      <Fragment>
-        <code id={demoid.current} style={{ display: "none" }} />
-        <code
-          className={props.className}
-          ref={refElement}
-          data-name="mermaid"
-        />
-      </Fragment>
-    );
-  }
-  return <code className={props.className}>{props.children}</code>;
-};
 
 function chatgptCommand({ story, storyId }: Props): commands.ICommand {
   return {
@@ -122,14 +75,14 @@ function chatgptCommand({ story, storyId }: Props): commands.ICommand {
       let newText = selectedText;
       const imageMatch = selectedText.match(/!\[(.*)\]\(.*\)/);
       if (imageMatch) {
-        const description = imageMatch[1];
+        const text = imageMatch[1];
         const image = await soloapi.textToImage({
           storyId,
-          description,
+          description: text,
           context: story.settings.state?.assistant.imageContext,
         });
-        const comment = `<!--- ${image.text} -->`;
-        newText = `${comment}\n![${description}](${image.url})`;
+        const description = `<!--- ${image.text} -->`;
+        newText = `![${text}](${image.url})${description}`;
       } else {
         const text = await soloapi.textToText({
           text: selectedText,
@@ -138,6 +91,10 @@ function chatgptCommand({ story, storyId }: Props): commands.ICommand {
         newText = text.text;
       }
 
+      api.setSelectionRange({
+        start: state1.selection.start,
+        end: state1.selection.end,
+      });
       api.replaceSelection(newText);
       const selectionStart = state1.selection.start;
       const selectionEnd = selectionStart + newText.length;
@@ -266,6 +223,7 @@ export function Markdown(props: Props) {
   const [markdown, setMarkdown] = useState(story?.markdown ?? "");
   const [markdownPreSave, setMarkdownPreSave] = useState("");
   const [showMermaid, setShowMermaid] = useState(false);
+  const [container, setContainer] = useState<HTMLDivElement>();
 
   const fileUpload = useCallback(
     async (file: File) => {
@@ -287,9 +245,33 @@ export function Markdown(props: Props) {
     setMarkdown(markdownPreSave);
   }, [markdownPreSave]);
 
+  const onRenderMermaid = useCallback(async () => {
+    const source = storyToMermaid(props.story);
+    const { svg, bindFunctions } = await mermaid.render(
+      `mermaid-chart`,
+      source
+    );
+    if (container) {
+      container.innerHTML = svg;
+      bindFunctions?.(container);
+    }
+  }, [props.story, container]);
+
   useEffect(() => {
     setMarkdown(story?.markdown ?? "");
   }, [story]);
+
+  const refElement = useCallback((node: HTMLDivElement) => {
+    if (node !== null) {
+      setContainer(node);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showMermaid) {
+      onRenderMermaid();
+    }
+  }, [showMermaid, props.story]);
 
   if (!story) {
     return <div>Loading...</div>;
@@ -299,6 +281,19 @@ export function Markdown(props: Props) {
 
   return (
     <div>
+      <div
+        className={"mermaid-overlay"}
+        style={showMermaid ? { display: "block" } : { display: "none" }}
+      >
+        <div
+          className={"mermaid-overlay-close"}
+          onClick={() => setShowMermaid(false)}
+        >
+          🗙
+        </div>
+        <div id="mermaid-chart" style={{ display: "none" }}></div>
+        <div ref={refElement}></div>
+      </div>
       <MDEditor
         height={height}
         value={markdown}
@@ -323,16 +318,6 @@ export function Markdown(props: Props) {
         }}
         onDrop={async (event) => {
           await onImagePasted(event.dataTransfer, setMarkdown, fileUpload);
-        }}
-        previewOptions={{
-          components: {
-            // ...(showMermaid ? { code: (props) => Code(props, story) } : {}),
-            // code: (props) => Code(props),
-            code: Code,
-          },
-          allowedElements: showMermaid
-            ? ["pre", "code", "style", "svg", "path", "rect", "g", "marker"]
-            : undefined,
         }}
       />
     </div>

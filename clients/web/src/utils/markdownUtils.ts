@@ -412,12 +412,11 @@ export function renderMarkdown(markdown: string): string {
 }
 
 export function storyToMarkdown(story: Story): string {
-  const mermaid = storyToMermaid(story);
   const intro = introToMarkdown(story);
   const sections = story.sections
     .map((section) => sectionToMarkdown(section))
     .join("\n");
-  return `${intro}\n\n${sections}\n\n${mermaidComment}\n\`\`\`mermaid\n${mermaid}\n\`\`\``;
+  return `${intro}\n\n${sections}\n`;
 }
 
 export function introToMarkdown(story: Story): string {
@@ -456,7 +455,7 @@ export function partsToMarkdown(parts: Part[]): string {
           const description = part.description
             ? `<!--- ${part.description} -->\n`
             : "";
-          return `${description}![${part.text}](${part.url})\n\n`;
+          return `![${part.text}](${part.url})${description}\n\n`;
         }
         case "link": {
           const nextPart = parts.at(i + 1);
