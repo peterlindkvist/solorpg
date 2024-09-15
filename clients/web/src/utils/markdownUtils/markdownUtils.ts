@@ -11,7 +11,7 @@ import {
   Part,
   Story,
   Paragraph,
-} from "../types";
+} from "../../types";
 
 // default mode
 const md = markdownit({
@@ -237,6 +237,10 @@ export function parseMarkdown(markdown: string): Story {
       };
     }
     if (token.type === "link_close") {
+      if (isComment(nextToken?.content) && inLink) {
+        skipNext = true;
+        inLink.error = true;
+      }
       part = inLink;
       inLink = undefined;
     }
@@ -388,11 +392,35 @@ export function parseMarkdown(markdown: string): Story {
     title: storyName ?? "",
     description: storyDescription.filter((part) => part.type !== "action"),
     markdown: markdown,
-    sections,
+    sections: correctFaultyLinks(sections),
     images: findImages(sections),
     state: {},
     settings,
   };
+}
+
+export function correctFaultyLinks(sections: Section[]): Section[] {
+  for (const section of sections) {
+    for (const part of section.parts) {
+      if (part.type === "link" && part.target.startsWith("#")) {
+        delete part.error;
+        const correctId = sections.find((s) => `#${s.id}` === part.target);
+
+        if (!correctId) {
+          const sameHeader = sections.find(
+            (s) => s.heading?.toLowerCase() === part.text.toLowerCase()
+          );
+          if (sameHeader) {
+            part.target = `#${sameHeader.id}`;
+            delete part.error;
+          } else {
+            part.error = true;
+          }
+        }
+      }
+    }
+  }
+  return sections;
 }
 
 export function findImages(sections: Section[]): Image[] {
@@ -459,8 +487,9 @@ export function partsToMarkdown(parts: Part[]): string {
         }
         case "link": {
           const nextPart = parts.at(i + 1);
+          const error = part.error ? "<!--- 🛇 -->" : "";
           const postNewlines = nextPart?.type === "link" ? "\n" : "\n\n";
-          return `- [${part.text}](${part.target})${postNewlines}`;
+          return `- [${part.text}](${part.target})${error}${postNewlines}`;
         }
         case "condition":
           return conditionToMarkdown(part) + "\n\n";

@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import "./GameContainer.css";
 import * as api from "./utils/api";
 import { Story } from "./types";
-import { parseMarkdown } from "./utils/markdownUtils";
+import { parseMarkdown } from "./utils/markdownUtils/markdownUtils";
 import { Game } from "./components/Game";
 
 function GameContainer() {

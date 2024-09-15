@@ -9,6 +9,7 @@ export type Link = {
   type: "link";
   text: string;
   target: string;
+  error?: boolean;
 };
 
 export type Image = {

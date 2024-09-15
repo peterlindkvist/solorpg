@@ -13,7 +13,7 @@ import {
   parseMarkdown,
   storyToMarkdown,
   storyToMermaid,
-} from "../utils/markdownUtils";
+} from "../utils/markdownUtils/markdownUtils";
 import mermaid from "mermaid";
 
 type Props = {

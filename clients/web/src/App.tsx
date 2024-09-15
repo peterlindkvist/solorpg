@@ -3,7 +3,10 @@ import "./App.css";
 import { Markdown } from "./components/Markdown";
 import * as api from "./utils/api";
 import { Page, Story } from "./types";
-import { parseMarkdown, storyToMarkdown } from "./utils/markdownUtils";
+import {
+  parseMarkdown,
+  storyToMarkdown,
+} from "./utils/markdownUtils/markdownUtils";
 import { Game } from "./components/Game";
 
 function App() {
