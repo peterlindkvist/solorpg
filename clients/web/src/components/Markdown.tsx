@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import "./Markdown.css";
+import json5 from "json5";
 import MDEditor, {
   commands,
   getExtraCommands,
@@ -23,7 +24,7 @@ type Props = {
   setPage: (page: Page) => void;
 };
 
-mermaid.initialize({ securityLevel: "loose" });
+mermaid.initialize({ securityLevel: "loose", maxTextSize: 90000 });
 
 function chatgptCommand({ story, storyId }: Props): commands.ICommand {
   return {
@@ -188,6 +189,83 @@ function revertCommand(onRevert: () => void): commands.ICommand {
   };
 }
 
+function conditionCommand(): commands.ICommand {
+  return {
+    name: "save game",
+    keyCommand: "saveGame",
+    shortcuts: "ctrlcmd+s",
+    buttonProps: { "aria-label": "Save Game (ctrl + s)" },
+    icon: <>⎇</>,
+    execute: async (state, api) => {
+      const newSelectionRange = selectWord({
+        text: state.text,
+        selection: state.selection,
+        prefix: state.command.prefix ?? "",
+      });
+      const state1 = api.setSelectionRange(newSelectionRange);
+      const selectedText = state1.selectedText;
+
+      if (selectedText.split("\n\n").length === 2) {
+        const [first, second] = selectedText.split("\n\n");
+        api.replaceSelection(
+          "` condition {`\n\n" +
+            first +
+            "\n\n`}:{`\n\n" +
+            second +
+            "\n\n`}`\n\n"
+        );
+      } else {
+        api.replaceSelection("` condition {`\n\n" + selectedText + "\n`}`\n\n");
+      }
+
+      const start = state1.selection.start + 2;
+
+      api.setSelectionRange({
+        start,
+        end: start + "condition".length,
+      });
+    },
+  };
+}
+
+function actionCommand(): commands.ICommand {
+  return {
+    name: "save game",
+    keyCommand: "saveGame",
+    shortcuts: "ctrlcmd+s",
+    buttonProps: { "aria-label": "Save Game (ctrl + s)" },
+    icon: <>⭐</>,
+    execute: async (state, api) => {
+      const newSelectionRange = selectWord({
+        text: state.text,
+        selection: state.selection,
+        prefix: state.command.prefix ?? "",
+      });
+      const state1 = api.setSelectionRange(newSelectionRange);
+      const selectedText = state1.selectedText;
+
+      let actionText: string;
+      let startText: string = "```\n";
+      try {
+        const json = json5.parse(selectedText);
+        actionText = JSON.stringify(json, null, 2);
+        startText = "```json\n";
+      } catch (e) {
+        actionText = selectedText ? selectedText : "{\n\n}";
+      }
+
+      api.replaceSelection(startText + actionText + "\n```\n\n");
+
+      const start = state1.selection.start + startText.length;
+
+      api.setSelectionRange({
+        start,
+        end: start + actionText.length,
+      });
+    },
+  };
+}
+
 function toggleMermaidCommand(
   showMermaid: boolean,
   setShowMermaid: (showMermaid: boolean) => void
@@ -300,8 +378,8 @@ export function Markdown(props: Props) {
         commands={[
           commands.link,
           commands.image,
-          commands.code,
-          commands.codeBlock,
+          actionCommand(),
+          conditionCommand(),
           commands.comment,
           chatgptCommand(props),
           saveCommand(onSave),

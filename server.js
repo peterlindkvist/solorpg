@@ -16,6 +16,7 @@ const {
   uploadTextToStorage,
   fetchTextFromStorage,
   uploadFileToStorage,
+  fetchTextMetadataFromStorage,
   streamToBuffer,
 } = require("./server/services/storageService");
 
@@ -28,10 +29,15 @@ async function solorpg(req, res) {
   if (req.path.startsWith("/api/stories")) {
     if (req.method === "GET") {
       const filePath = req.path.replace("/api/stories/", "");
-      console.log("GET story", filePath);
-      let content = await fetchTextFromStorage(filePath);
-      if (!content) {
-        content = await fetchTextFromStorage(`help/default.md`);
+      let content = "";
+      if (filePath === "list") {
+        const metadata = await fetchTextMetadataFromStorage();
+        content = JSON.stringify(metadata, undefined, 2);
+      } else {
+        content = await fetchTextFromStorage(filePath);
+        if (!content) {
+          content = await fetchTextFromStorage(`help/default.md`);
+        }
       }
       res.send(content);
       return;
@@ -125,38 +131,6 @@ async function solorpg(req, res) {
   res.setHeader("Content-Type", file.mime);
 
   res.send(file.content);
-}
-
-function storyTemplate(storyName) {
-  const codeChars = "```";
-  return `# ${storyName}
-${codeChars}
-{
-"name": "${storyName}",
-  "assistant": {
-    "imageContext": "Icy mountains",
-    "textContext": "Rewite the story in a lovecraftian style",
-    "narrator": "nova"
-  },
-  health : 14,
-  gold: 2
-}
-${codeChars}
-A story about cold mountains and an incredible adventures
-
-You decide where the story goes
-
-- [start](#start)
-- [leave](#leave)
-
-## start
-You are in the middle of the mountains, the cold wind is blowing and you can see a cave in the distance
-
-\`{gold : "+=10"}\`
-
-## leave
-You decide to leave the mountains and go back to the city. Adventures are not for you
-`;
 }
 
 module.exports = {

@@ -25,6 +25,7 @@ function GameContainer() {
   if (!bookName) {
     const url = new URL(window.location.href);
     const [, , , storyName, chapterName] = url.pathname.split("/");
+
     if (!storyName || !chapterName) {
       fetchStory("help", "introduction");
       // window.location.href = `${folder}/game.html/help/introduction`;

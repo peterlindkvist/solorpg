@@ -91,7 +91,7 @@ describe("markdownUtils Links", () => {
 
 ### Header
         
-- [Header 2](#header-3)
+- [Header 2](#header-2)
 - [Header 3](#header-3)
 
 ### Header 2

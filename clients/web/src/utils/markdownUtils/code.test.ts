@@ -219,6 +219,54 @@ describe("markdownUtils Code", () => {
         },
       ]);
     });
+
+    test("example 1", () => {
+      const markdown = [];
+      markdown.push("### Header");
+      markdown.push("`{dice}>=0 & {dice}<=2 {`");
+      markdown.push(
+        " - [Om du har pekat ut en siffra mellan 0 och 2,](#chapter-108)"
+      );
+      markdown.push(" `}`");
+      markdown.push(" `{dice}>=3 & {dice}<=9 {`");
+      markdown.push(" - [Om siffran är mellan 3 och 9,](#chapter-25)");
+      markdown.push(" `}`");
+
+      const story = parseMarkdown(markdown.join("\n\n"));
+
+      expect(story.sections).toEqual([
+        {
+          heading: "Header",
+          id: "header",
+          parts: [
+            {
+              type: "condition",
+              condition: "{dice}>=0 & {dice}<=2",
+              true: [
+                {
+                  target: "#chapter-108",
+                  text: "Om du har pekat ut en siffra mellan 0 och 2,",
+                  type: "link",
+                },
+              ],
+              false: [],
+            },
+            {
+              type: "condition",
+              condition: "{dice}>=3 & {dice}<=9",
+              true: [
+                {
+                  target: "#chapter-25",
+                  text: "Om siffran är mellan 3 och 9,",
+                  type: "link",
+                },
+              ],
+              false: [],
+            },
+          ],
+        },
+      ]);
+    });
   });
 
   describe("partsToMarkdown", () => {

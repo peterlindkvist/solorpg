@@ -133,6 +133,20 @@ async function fetchTextFromStorage(fileName) {
   }
 }
 
+async function fetchTextMetadataFromStorage() {
+  const bucket = storage.bucket(bucketName);
+  const [files] = await bucket.getFiles();
+  return files
+    .filter((file) => file.name.endsWith(".md"))
+    .map((file) => {
+      const name = file.name.replace(/\.md$/, "");
+      return {
+        name,
+        url: "/solorpg/edit/" + name,
+      };
+    });
+}
+
 function streamToBuffer(stream) {
   return new Promise((resolve, reject) => {
     const _buf = [];
@@ -149,5 +163,6 @@ module.exports = {
   uploadTextToStorage,
   uploadFileToStorage,
   fetchTextFromStorage,
+  fetchTextMetadataFromStorage,
   streamToBuffer,
 };

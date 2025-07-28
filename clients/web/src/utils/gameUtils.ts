@@ -128,13 +128,15 @@ export function evaluateCondition(
 ): { isTrue: boolean; renderPart: Condition } {
   const withState = replaceWithState(condition.condition, state);
   const noSpace = withState.replaceAll(" ", "");
-  const withRolledDices = rollDices(noSpace);
+  const evalLogic = noSpace.replaceAll("&&", " and ").replaceAll("||", " or ");
+  const withRolledDices = rollDices(evalLogic);
   const newValue = evaluateValue(withRolledDices.value);
   const text = `${condition.condition} -> ${withRolledDices.value} -> ${newValue}`;
 
   // console.log("evaluateCondition", {
   //   withState,
   //   noSpace,
+  //   evalLogic,
   //   withRolledDices,
   //   newValue,
   //   state,
@@ -260,6 +262,7 @@ function evaluateValue(value: string | number): string | number | undefined {
   try {
     const parser = Parser.parse(value.toString());
     const variables = parser.variables();
+
     if (variables.length === 0) {
       return parser.evaluate();
     }

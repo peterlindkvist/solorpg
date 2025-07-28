@@ -10,6 +10,10 @@ export function getStory(storyId: string, bookName: string): Promise<string> {
   );
 }
 
+export function listStories(): Promise<{ name: string; url: string }[]> {
+  return fetch(`${apiPath}/stories/list`).then((res) => res.json());
+}
+
 export async function fileUpload(
   file: File,
   storyId: string

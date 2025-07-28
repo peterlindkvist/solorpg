@@ -59,6 +59,22 @@ describe("gameUtils", () => {
       );
       expect(isTrue).toBe(true);
     });
+    test("with && in condition", () => {
+      const condition: Condition = {
+        type: "condition",
+        condition: "{strength} >= 12 && {agility} <= 10",
+        true: [],
+        false: [],
+      };
+      const { isTrue, renderPart } = evaluateCondition(condition, {
+        strength: 14,
+        agility: 9,
+      });
+      expect(renderPart.text).toEqual(
+        "{strength} >= 12 && {agility} <= 10 -> 14>=12 and 9<=10 -> true"
+      );
+      expect(isTrue).toBe(true);
+    });
   });
   describe("evaluateAction", () => {
     test("simple set action", () => {
