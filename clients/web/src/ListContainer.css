@@ -1,0 +1,11 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: left;
+  padding: 2rem;
+}
+
+.list-container {
+  display: flex;
+  flex-direction: column;
+}
