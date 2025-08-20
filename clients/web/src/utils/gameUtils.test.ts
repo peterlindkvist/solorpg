@@ -1,10 +1,11 @@
 import { describe, expect, test } from "@jest/globals";
-import { Action, Condition } from "../types";
+import { Action, Condition, Story, Navigation, Paragraph, Header, Link } from "../types";
 import {
   evaluateAction,
   evaluateCondition,
   flatState,
   replaceWithState,
+  parseNextSection,
 } from "./gameUtils";
 
 describe("gameUtils", () => {
@@ -241,6 +242,319 @@ describe("gameUtils", () => {
 
       expect(state.fruit).toBe("apple");
       expect(renderPart.text).toEqual("fruit: [1]-> apple");
+    });
+  });
+
+  describe("parseNextSection", () => {
+    test("should parse section with no navigation links", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [
+          {
+            id: "section1",
+            parts: [
+              { type: "paragraph", text: "This is a paragraph." } as Paragraph,
+            ],
+          },
+        ],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "section1", {});
+
+      expect(result.parts).toHaveLength(1);
+      expect(result.parts[0]).toEqual({
+        type: "paragraph",
+        text: "This is a paragraph.",
+      });
+      expect(result.newState).toEqual({});
+    });
+
+    test("should parse section with multiple navigation links (no recursion)", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [
+          {
+            id: "section1",
+            parts: [
+              { type: "paragraph", text: "Choose your path:" } as Paragraph,
+              { type: "navigation", text: "Go left", target: "left" } as Navigation,
+              { type: "navigation", text: "Go right", target: "right" } as Navigation,
+            ],
+          },
+        ],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "section1", {});
+
+      expect(result.parts).toHaveLength(3);
+      expect(result.parts[0]).toEqual({
+        type: "paragraph",
+        text: "Choose your path:",
+      });
+      expect(result.parts[1]).toEqual({
+        type: "navigation",
+        text: "Go left",
+        target: "left",
+      });
+      expect(result.parts[2]).toEqual({
+        type: "navigation",
+        text: "Go right",
+        target: "right",
+      });
+    });
+
+    test("should recursively follow single navigation link and merge parts", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [
+          {
+            id: "section1",
+            parts: [
+              { type: "paragraph", text: "First paragraph." } as Paragraph,
+              { type: "navigation", text: "Continue", target: "section2" } as Navigation,
+            ],
+          },
+          {
+            id: "section2",
+            parts: [
+              { type: "paragraph", text: "Second paragraph." } as Paragraph,
+              { type: "navigation", text: "Next", target: "section3" } as Navigation,
+            ],
+          },
+          {
+            id: "section3",
+            parts: [
+              { type: "paragraph", text: "Third paragraph." } as Paragraph,
+              { type: "navigation", text: "Choice A", target: "choiceA" } as Navigation,
+              { type: "navigation", text: "Choice B", target: "choiceB" } as Navigation,
+            ],
+          },
+        ],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "section1", {});
+
+      expect(result.parts).toHaveLength(5);
+      expect(result.parts[0]).toEqual({
+        type: "paragraph",
+        text: "First paragraph.",
+      });
+      expect(result.parts[1]).toEqual({
+        type: "paragraph",
+        text: "Second paragraph.",
+      });
+      expect(result.parts[2]).toEqual({
+        type: "paragraph",
+        text: "Third paragraph.",
+      });
+      expect(result.parts[3]).toEqual({
+        type: "navigation",
+        text: "Choice A",
+        target: "choiceA",
+      });
+      expect(result.parts[4]).toEqual({
+        type: "navigation",
+        text: "Choice B",
+        target: "choiceB",
+      });
+    });
+
+    test("should handle state changes during recursive parsing", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [
+          {
+            id: "section1",
+            parts: [
+              { type: "paragraph", text: "Starting section." } as Paragraph,
+              { type: "action", state: { coins: 10 } } as Action,
+              { type: "navigation", text: "Continue", target: "section2" } as Navigation,
+            ],
+          },
+          {
+            id: "section2",
+            parts: [
+              { type: "paragraph", text: "Middle section. You have {coins} coins." } as Paragraph,
+              { type: "action", state: { coins: "+=5" } } as Action,
+              { type: "navigation", text: "Continue", target: "section3" } as Navigation,
+            ],
+          },
+          {
+            id: "section3",
+            parts: [
+              { type: "paragraph", text: "Final section. You now have {coins} coins." } as Paragraph,
+              { type: "navigation", text: "End", target: "end" } as Navigation,
+              { type: "navigation", text: "Restart", target: "section1" } as Navigation,
+            ],
+          },
+        ],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "section1", {});
+
+      expect(result.newState).toEqual({ coins: 15 });
+      expect(result.parts).toHaveLength(7);
+      
+      // Check that state variables were properly replaced
+      const middleParagraph = result.parts.find(
+        (p) => p.type === "paragraph" && (p as Paragraph).text?.includes("You have")
+      ) as Paragraph;
+      expect(middleParagraph.text).toBe("Middle section. You have 10 coins.");
+      
+      const finalParagraph = result.parts.find(
+        (p) => p.type === "paragraph" && (p as Paragraph).text?.includes("You now have")
+      ) as Paragraph;
+      expect(finalParagraph.text).toBe("Final section. You now have 15 coins.");
+    });
+
+    test("should respect maxDepth parameter to prevent infinite loops", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [
+          {
+            id: "section1",
+            parts: [
+              { type: "paragraph", text: "Section 1" } as Paragraph,
+              { type: "navigation", text: "Continue", target: "section2" } as Navigation,
+            ],
+          },
+          {
+            id: "section2",
+            parts: [
+              { type: "paragraph", text: "Section 2" } as Paragraph,
+              { type: "navigation", text: "Continue", target: "section1" } as Navigation,
+            ],
+          },
+        ],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "section1", {}, {}, 3);
+
+      // Should stop at maxDepth and include accumulated parts
+      expect(result.parts.length).toBeGreaterThan(0);
+      expect(result.parts.length).toBeLessThanOrEqual(6); // 3 iterations * 2 parts max
+      
+      // Should include parts from multiple sections
+      const paragraphs = result.parts.filter(p => p.type === "paragraph") as Paragraph[];
+      expect(paragraphs.length).toBeGreaterThan(1);
+    });
+
+    test("should handle non-existent section", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "nonexistent", {});
+
+      expect(result.parts).toHaveLength(0);
+      expect(result.newState).toEqual({});
+      expect(result.section).toBeUndefined();
+    });
+
+    test("should handle empty section with single navigation", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [
+          {
+            id: "empty",
+            parts: [
+              { type: "navigation", text: "Skip", target: "content" } as Navigation,
+            ],
+          },
+          {
+            id: "content",
+            parts: [
+              { type: "paragraph", text: "Actual content." } as Paragraph,
+            ],
+          },
+        ],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "empty", {});
+
+      expect(result.parts).toHaveLength(1);
+      expect(result.parts[0]).toEqual({
+        type: "paragraph",
+        text: "Actual content.",
+      });
+    });
+
+    test("should recursively follow single link and merge parts", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [
+          {
+            id: "section1",
+            parts: [
+              { type: "header", text: "Höger 2" } as Header,
+              { type: "link", text: "tillbaka till gläntan", target: "section2" } as Link,
+            ],
+          },
+          {
+            id: "section2",
+            parts: [
+              { type: "paragraph", text: "Back to the clearing." } as Paragraph,
+              { type: "link", text: "Choice A", target: "choiceA" } as Link,
+              { type: "link", text: "Choice B", target: "choiceB" } as Link,
+            ],
+          },
+        ],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "section1", {});
+
+      expect(result.parts).toHaveLength(4);
+      expect(result.parts[0]).toEqual({
+        type: "header",
+        text: "Höger 2",
+      });
+      expect(result.parts[1]).toEqual({
+        type: "paragraph",
+        text: "Back to the clearing.",
+      });
+      expect(result.parts[2]).toEqual({
+        type: "link",
+        text: "Choice A",
+        target: "choiceA",
+      });
+      expect(result.parts[3]).toEqual({
+        type: "link",
+        text: "Choice B",
+        target: "choiceB",
+      });
     });
   });
 });

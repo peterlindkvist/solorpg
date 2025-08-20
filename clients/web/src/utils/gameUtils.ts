@@ -1,9 +1,110 @@
 import { flatten, unflatten } from "safe-flat";
 import { Parser } from "expr-eval";
-import { Action, Section, Condition, Part, State, Settings } from "../types";
+import {
+  Action,
+  Section,
+  Condition,
+  Part,
+  State,
+  Settings,
+  Story,
+  Navigation,
+  Link,
+} from "../types";
 import { DiceRoll } from "@dice-roller/rpg-dice-roller";
 
 type FlattenState = Record<string, string | number>;
+
+export function parseNextSection(
+  story: Story,
+  sectionId: string,
+  state: State,
+  settings: Settings = {},
+  maxDepth: number = 10
+): {
+  section?: Section;
+  parts: Part[];
+  newState: State;
+  narratorText: string;
+} {
+  return parseNextSectionRecursive(story, sectionId, state, settings, maxDepth);
+}
+
+function parseNextSectionRecursive(
+  story: Story,
+  sectionId: string,
+  state: State,
+  settings: Settings,
+  remainingDepth: number
+): {
+  section?: Section;
+  parts: Part[];
+  newState: State;
+  narratorText: string;
+} {
+  if (remainingDepth <= 0) {
+    return {
+      parts: [],
+      newState: state,
+      narratorText: getNarratorText([]),
+    };
+  }
+
+  const section = story.sections.find((s) => s.id === sectionId);
+
+  if (!section) {
+    return {
+      parts: [],
+      newState: state,
+      narratorText: getNarratorText([]),
+    };
+  }
+
+  const { parts, newState } = parseSection(section, state, settings);
+
+  // Check if there's exactly one navigation link (including both navigation and link types)
+  const navigationLinks = parts.filter(
+    (p) => p.type === "navigation" || p.type === "link"
+  ) as (Navigation | Link)[];
+
+  if (navigationLinks.length === 1) {
+    // Follow the single link recursively
+    const nextSectionId = navigationLinks[0].target.replace("#", "");
+    const followed = parseNextSectionRecursive(
+      story,
+      nextSectionId,
+      newState,
+      settings,
+      remainingDepth - 1
+    );
+
+    // Merge current parts with accumulated parts
+    // If there's exactly one navigation link, exclude it from merged parts since it will be followed
+    const mergedParts = [
+      ...parts.filter((p) =>
+        navigationLinks.length === 1
+          ? p.type !== "navigation" && p.type !== "link"
+          : true
+      ),
+      ...followed.parts,
+    ];
+
+    return {
+      section,
+      parts: mergedParts,
+      newState,
+      narratorText: getNarratorText(mergedParts),
+    };
+  }
+
+  // If there are 0 or multiple navigation links, return current result
+  return {
+    section,
+    parts,
+    newState,
+    narratorText: getNarratorText(parts),
+  };
+}
 
 export function parseSection(
   section: Section,
@@ -26,7 +127,6 @@ export function parseSection(
       renderParts.push({ ...part, text: withState });
     } else if (part.type === "navigation") {
       renderParts.push(part);
-      break;
     } else if (part.type === "condition") {
       const result = evaluateCondition(part, flatStateSettings);
       const codeParts = result.isTrue ? part.true : part.false;
@@ -39,7 +139,6 @@ export function parseSection(
           renderParts.push({ ...codePart, text: withState });
         } else if (codePart.type === "navigation") {
           renderParts.push(codePart);
-          break;
         } else if (["image", "link"].includes(codePart.type)) {
           renderParts.push(codePart);
         } else if (codePart.type === "action") {

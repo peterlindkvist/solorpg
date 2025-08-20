@@ -9,7 +9,7 @@ import { ButtonPart } from "./game/ButtonPart";
 import {
   buildStateQuery,
   mergeStates,
-  parseSection,
+  parseNextSection,
   parseStateQueryValue,
 } from "../utils/gameUtils";
 import { Header } from "./game/Header";
@@ -34,6 +34,7 @@ export function Game(props: Props) {
   const [isLoadingNarrator, setIsLoadingNarrator] = useState(false);
   const [state, setState] = useState<State>();
 
+  // to be able to log the state in the console
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (globalThis as any).state = state;
 
@@ -97,17 +98,25 @@ export function Game(props: Props) {
 
   const setNewsection = useCallback(
     (sectionId: string, oldState: State) => {
-      if (sectionId && sectionId !== section?.id) {
-        const newsection = story?.sections.find((c) => c.id === sectionId);
-        if (newsection) {
-          const { parts, newState, narratorText } = parseSection(
-            newsection,
-            oldState,
-            story?.settings.state
-          );
+      if (story && sectionId && sectionId !== section?.id) {
+        const {
+          section: newSection,
+          parts,
+          newState,
+          narratorText,
+        } = parseNextSection(story, sectionId, oldState, story.settings.state);
+
+        console.log("setNewsection", {
+          sectionId,
+          newSection,
+          parts,
+          newState,
+        });
+
+        if (newSection) {
           setRenderParts(parts);
           setState(newState);
-          setSection(newsection);
+          setSection(newSection);
 
           document.querySelector("body")?.scrollIntoView();
 
@@ -166,8 +175,18 @@ export function Game(props: Props) {
     const [sectionId, stateJSON] = window.location.hash
       .substring(1)
       .split("?state=");
-    setNewsection(sectionId, stateJSON ? parseStateQueryValue(stateJSON) : {});
-  }, [setNewsection]);
+    console.log("hashChangeHandler", {
+      fullHash: window.location.hash,
+      sectionId,
+      availableSections: story?.sections.map((s) => s.id),
+    });
+    if (sectionId) {
+      setNewsection(
+        sectionId,
+        stateJSON ? parseStateQueryValue(stateJSON) : {}
+      );
+    }
+  }, [setNewsection, story]);
 
   useEffect(() => {
     window.addEventListener("hashchange", hashChangeHandler);
@@ -178,21 +197,27 @@ export function Game(props: Props) {
     };
   }, [hashChangeHandler]);
 
-  if (story !== props.story) {
-    setStory(props.story);
-  }
+  // Initialize story when props change
+  useEffect(() => {
+    if (story !== props.story) {
+      setStory(props.story);
+    }
+  }, [props.story, story]);
 
-  const [sectionId, hashQuery] = window.location.hash.substring(1).split("?");
-  if (!sectionId && props?.story?.sections[0]?.id) {
-    const section = props.story?.sections[0]?.id;
-    const hashState = hashQuery
-      ? parseStateQueryValue(hashQuery.replace("state=", ""))
-      : undefined;
-    const newState = mergeStates(props.story?.state, hashState);
-    setHash(section, newState);
-  }
+  console.log("Story", story);
 
-  console.log("render", renderParts, section);
+  // Handle initial route when no section is selected
+  useEffect(() => {
+    const [sectionId, hashQuery] = window.location.hash.substring(1).split("?");
+    if (!sectionId && props?.story?.sections[0]?.id) {
+      const section = props.story?.sections[0]?.id;
+      const hashState = hashQuery
+        ? parseStateQueryValue(hashQuery.replace("state=", ""))
+        : undefined;
+      const newState = mergeStates(props.story?.state, hashState);
+      setHash(section, newState);
+    }
+  }, [props.story, setHash]);
 
   return (
     <div
@@ -212,7 +237,7 @@ export function Game(props: Props) {
       <div className="game-section">
         {renderParts.map((part, i) => {
           if (part.type === "header") {
-            return <h2>{section?.heading}</h2>;
+            return <h2 key={i}>{part.text}</h2>;
           }
           if (part.type === "image") {
             return <ImagePart key={i} part={part} />;
@@ -223,13 +248,14 @@ export function Game(props: Props) {
           if (part.type === "paragraph") {
             return <ParagraphPart key={i} part={part} />;
           }
-          if (part.type === "action" || part.type === "condition") {
-            return (
-              <code className="game-action" key={i}>
-                {part.text}
-              </code>
-            );
-          }
+          // hide the action and condition parts in the UI
+          // if (part.type === "action" || part.type === "condition") {
+          //   return (
+          //     <code className="game-action" key={i}>
+          //       {part.text}
+          //     </code>
+          //   );
+          // }
         })}
       </div>
       {/* {useNarrator && narratorUrl && (
