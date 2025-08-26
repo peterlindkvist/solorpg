@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Section, Link, Part, State, Story } from "../types";
-import { useReactMediaRecorder } from "react-media-recorder";
-import * as api from "../utils/api";
+import { Section, Part, State, Story } from "../types";
 
 import "./Game.css";
 import { ImagePart } from "./game/ImagePart";
@@ -14,6 +12,8 @@ import {
 } from "../utils/gameUtils";
 import { Header } from "./game/Header";
 import { ParagraphPart } from "./game/ParagraphPart";
+import { Narrator } from "./game/Narrator";
+import { useVoice } from "./game/Voice";
 
 type Props = {
   storyId?: string;
@@ -21,75 +21,34 @@ type Props = {
   exit?: () => void;
 };
 
-let recordInterval: NodeJS.Timeout | undefined;
-
 export function Game(props: Props) {
   const [story, setStory] = useState<Story>();
   const [section, setSection] = useState<Section>();
   const [renderParts, setRenderParts] = useState<Array<Part>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [useUserVoice, setUseUserVoice] = useState(false);
-  const [useNarrator, setUseNarrator] = useState(false);
-  // const [narratorUrl, setNarratorFile] = useState<string>();
-  const [isLoadingNarrator, setIsLoadingNarrator] = useState(false);
+  const [useNarrator, setUseNarrator] = useState(true);
   const [state, setState] = useState<State>();
 
   // to be able to log the state in the console
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (globalThis as any).state = state;
 
-  const { startRecording, stopRecording } = useReactMediaRecorder({
-    audio: useUserVoice,
-    video: false,
-    askPermissionOnMount: true,
-    onStop: (_blobUrl, blob) => {
-      if (useUserVoice) {
-        analyseUserVoice(blob);
-      }
-    },
+  const { recordUserVoice, stopVoiceRecording } = useVoice({
+    useUserVoice,
+    section,
+    story,
+    storyId: props.storyId,
+    setSection,
+    setIsRecording,
   });
-
-  const recordUserVoice = useCallback(() => {
-    console.log("recordVoice start");
-    setIsRecording(true);
-    startRecording();
-    recordInterval = setTimeout(() => {
-      console.log("recordVoice stop");
-      stopRecording();
-      setIsRecording(false);
-    }, 3000);
-  }, [startRecording, stopRecording]);
 
   const toggleUserVoice = useCallback(() => {
     if (useUserVoice) {
-      console.log("stopVoice");
-      if (recordInterval) {
-        clearTimeout(recordInterval);
-      }
-      stopRecording();
-      setIsRecording(false);
+      stopVoiceRecording();
     }
     setUseUserVoice(!useUserVoice);
-  }, [stopRecording, useUserVoice]);
-
-  const analyseUserVoice = useCallback(
-    async (blob: Blob) => {
-      const ret = await api.speechToText(blob, {
-        storyId: props.storyId ?? "",
-      });
-      const spokenText = ret.text.toLowerCase();
-      const links: Link[] =
-        (section?.parts.filter((p) => p.type === "link") as Link[]) ?? [];
-      const found = links.find((c) => spokenText === c.text.toLowerCase());
-
-      if (found) {
-        setSection(story?.sections.find((c) => c.id === found.target));
-      } else {
-        recordUserVoice();
-      }
-    },
-    [story, section, recordUserVoice, props.storyId]
-  );
+  }, [stopVoiceRecording, useUserVoice]);
 
   const setHash = useCallback((sectionId: string, state: State = {}) => {
     const hash = `${sectionId}?${buildStateQuery(state)}`;
@@ -103,7 +62,6 @@ export function Game(props: Props) {
           section: newSection,
           parts,
           newState,
-          narratorText,
         } = parseNextSection(story, sectionId, oldState, story.settings.state);
 
         console.log("setNewsection", {
@@ -119,39 +77,12 @@ export function Game(props: Props) {
           setSection(newSection);
 
           document.querySelector("body")?.scrollIntoView();
-
-          if (useNarrator && story) {
-            setIsLoadingNarrator(true);
-            isLoadingNarrator;
-            const T2S = window.speechSynthesis || speechSynthesis;
-            const utter = new SpeechSynthesisUtterance(narratorText);
-            utter.volume = 1;
-            const voices = T2S.getVoices();
-            const voice =
-              voices.find((v) => v.lang === "sv-SE") ??
-              voices.find((v) => v.lang === "en-US");
-            if (voice) {
-              utter.lang = voice?.lang;
-              utter.voice = voice;
-            }
-            T2S.speak(utter);
-            setIsLoadingNarrator(false);
-            // const query = {
-            //   storyId: story.id,
-            //   text: narratorText,
-            //   narrator: story.settings.assistant?.narrator,
-            // };
-            // api.textToSpeech(query).then((res) => {
-            //   console.log("narrator", res);
-            //   setNarratorFile(res.url);
-            // });
-          }
         } else {
           console.error("section not found", sectionId);
         }
       }
     },
-    [story, section, useNarrator, isLoadingNarrator]
+    [story, section]
   );
 
   const navigateHandler = useCallback(
@@ -258,14 +189,13 @@ export function Game(props: Props) {
           // }
         })}
       </div>
-      {/* {useNarrator && narratorUrl && (
-        <audio
-          src={narratorUrl}
-          controls
-          autoPlay
-          onEnded={() => useUserVoice && recordUserVoice()}
-        />
-      )} */}
+      <Narrator
+        useNarrator={useNarrator}
+        useUserVoice={useUserVoice}
+        section={section}
+        story={story}
+        onEnd={recordUserVoice}
+      />
     </div>
   );
 }

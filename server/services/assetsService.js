@@ -34,7 +34,9 @@ async function textToImage(description, context, renderType) {
 
 async function textToSpeech(text, voice) {
   const mp3 = await openai.audio.speech.create({
-    model: "tts-1",
+    // model: "tts-1",
+    // model: "tts-1-hd",
+    model: "gpt-4o-mini-tts",
     voice,
     input: text,
   });

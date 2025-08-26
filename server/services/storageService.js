@@ -157,6 +157,18 @@ function streamToBuffer(stream) {
   });
 }
 
+async function checkFileExists(fileName) {
+  console.log("checkFileExists", fileName);
+  const bucket = storage.bucket(bucketName);
+  const file = bucket.file(fileName);
+  const exists = await file.exists();
+  if (exists[0]) {
+    const publicUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+    return { exists: true, url: publicUrl };
+  }
+  return { exists: false, url: null };
+}
+
 module.exports = {
   uploadImageToStorage,
   uploadUrlToStorage,
@@ -165,4 +177,5 @@ module.exports = {
   fetchTextFromStorage,
   fetchTextMetadataFromStorage,
   streamToBuffer,
+  checkFileExists,
 };

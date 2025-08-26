@@ -18,6 +18,7 @@ const {
   uploadFileToStorage,
   fetchTextMetadataFromStorage,
   streamToBuffer,
+  checkFileExists,
 } = require("./server/services/storageService");
 
 async function solorpg(req, res) {
@@ -92,11 +93,26 @@ async function solorpg(req, res) {
   if (req.path.startsWith("/api/speech") && req.method === "POST") {
     const { text, storyId, narrator = "nova" } = req.query;
     console.log("text", text, narrator);
+
+    // Create a consistent filename based on text content and narrator
+    const crypto = require("crypto");
+    const textHash = crypto
+      .createHash("md5")
+      .update(text + narrator)
+      .digest("hex");
+    const fileName = `${storyId}/speech_${textHash}.mp3`;
+
+    // Check if the file already exists
+    const existingFile = await checkFileExists(fileName);
+    if (existingFile.exists) {
+      console.log("Using existing speech file:", fileName);
+      res.send({ url: existingFile.url });
+      return;
+    }
+
+    // Generate new speech file
     const ret = await textToSpeech(text, narrator);
-    const file = await uploadFileToStorage(
-      ret.buffer,
-      `${storyId}/${ret.fileName}`
-    );
+    const file = await uploadFileToStorage(ret.buffer, fileName);
 
     res.send({ url: file.url });
     return;
