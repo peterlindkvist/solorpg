@@ -193,8 +193,10 @@ export function Game(props: Props) {
         useNarrator={useNarrator}
         useUserVoice={useUserVoice}
         section={section}
+        parts={renderParts}
         story={story}
         onEnd={recordUserVoice}
+        storyId={props.storyId}
       />
     </div>
   );

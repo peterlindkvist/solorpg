@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { Section, Story } from "../../types";
+import { Part, Section, Story } from "../../types";
 import * as api from "../../utils/api";
 
 type Props = {
   useNarrator: boolean;
   useUserVoice: boolean;
   section?: Section;
+  parts: Part[];
   story?: Story;
+  storyId?: string;
   onEnd: () => void;
 };
 
@@ -14,23 +16,29 @@ export function Narrator({
   useNarrator,
   useUserVoice,
   section,
+  parts,
   story,
+  storyId,
   onEnd,
 }: Props) {
   const [narratorUrls, setNarratorUrls] = useState<string[]>([]);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
 
   const generateNarration = useCallback(async () => {
-    if (!useNarrator || !story || !section) return;
+    if (!useNarrator || !story || !parts || !storyId) return;
 
-    const paragraphs = section.parts.filter((p) => p.type === "paragraph");
+
+    const paragraphs = parts.filter((p) => p.type === "paragraph");
+
     const urls: string[] = [];
 
     for (const p of paragraphs) {
       const query = {
-        storyId: "test-4o",
+        storyId,
         text: p.text,
-        narrator: "nova",
+        narrator: "elevenlabs-adam-sv",
+        // narrator: "elevenlabs-sanna-sv",
+        // narrator: "openai-nova",
       };
 
       try {

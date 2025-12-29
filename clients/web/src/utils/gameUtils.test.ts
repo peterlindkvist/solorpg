@@ -32,6 +32,17 @@ describe("gameUtils", () => {
       expect(renderPart.text).toEqual("4+[d1] < 4 -> 4+1<4 -> false");
       expect(isTrue).toBe(false);
     });
+    test("with dice in variable", () => {
+      const condition: Condition = {
+        type: "condition",
+        condition: "4+[{damage}] < 4",
+        true: [],
+        false: [],
+      };
+      const { isTrue, renderPart } = evaluateCondition(condition, {damage: "d1"});
+      expect(renderPart.text).toEqual("4+[{damage}] < 4 -> 4+1<4 -> false");
+      expect(isTrue).toBe(false);
+    });
     test("with variable", () => {
       const condition: Condition = {
         type: "condition",
@@ -181,6 +192,19 @@ describe("gameUtils", () => {
 
       expect(state.rolld6).toBe(1);
       expect(renderPart.text).toEqual("rolld6: [1]-> 1");
+    });
+
+     test("evaluate with dices in variable", () => {
+      const action: Action = {
+        type: "action",
+        state: {
+          rolld6: "[{damage}]+1",
+        },
+      };
+      const { state, renderPart } = evaluateAction(action, {damage: "d1"});
+
+      expect(state.rolld6).toBe(2);
+      expect(renderPart.text).toEqual("rolld6: [1]-> 2");
     });
 
     test("evaluate with object table", () => {

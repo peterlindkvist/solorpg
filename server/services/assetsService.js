@@ -1,8 +1,15 @@
 const fs = require("fs");
 const OpenAI = require("openai");
 const crypto = require("crypto");
+const env = require("dotenv");
+const { language } = require("@elevenlabs/elevenlabs-js/api/resources/dubbing/resources/resource");
+const ElevenLabsClient = require('@elevenlabs/elevenlabs-js').ElevenLabsClient;
+
+env.config(); 
 
 const openai = new OpenAI();
+const elevenLabs = new ElevenLabsClient({ apiKey: process.env.ELEVENLABS_API_KEY });
+
 
 async function generateImages(context, renderType, descriptions) {
   for (const description of descriptions) {
@@ -32,18 +39,51 @@ async function textToImage(description, context, renderType) {
   };
 }
 
-async function textToSpeech(text, voice) {
+async function textToSpeechOpenAI(text, narrator) {
+  const [_, voiceName] = narrator.split("-");
+
   const mp3 = await openai.audio.speech.create({
     // model: "tts-1",
     // model: "tts-1-hd",
     model: "gpt-4o-mini-tts",
-    voice,
+    voice: voiceName,
     input: text,
   });
-  const fileName = `${hashString(`${voice}_${text}`)}.mp3`;
+  const fileName = `${hashString(`${voiceName}_${text}`)}.mp3`;
 
   return {
     buffer: Buffer.from(await mp3.arrayBuffer()),
+    fileName,
+  };
+}
+
+async function textToSpeechElevenLabs(text, narrator) {
+  const [_, voiceName, langCode] = narrator.split("-");
+  const voices = {
+    sanna: "aSLKtNoVBZlxQEMsnGL2",
+    adam: "x0u3EW21dbrORJzOq1m9"
+  }
+  const voice = voices[voiceName];
+  console.log("Generating speech with ElevenLabs:", voices, narrator, voice, langCode, text);
+  
+  const mp3Stream = await elevenLabs.textToSpeech.convert(voice, {
+    languageCode: langCode,
+    outputFormat: "mp3_44100_128",
+    text,
+    modelId: "eleven_multilingual_v2",
+  });
+
+ const fileName = `${hashString(`${voice}_${langCode}_${text}`)}.mp3`;
+
+ console.log("Generated speech with ElevenLabs:", fileName);
+
+ const chunks = [];
+ for await (const chunk of mp3Stream) {
+   chunks.push(chunk);
+ }
+
+ return {
+    buffer: Buffer.concat(chunks),
     fileName,
   };
 }
@@ -105,7 +145,8 @@ function hashString(string) {
 module.exports = {
   generateImages,
   textToImage,
-  textToSpeech,
+  textToSpeechOpenAI,
+  textToSpeechElevenLabs,
   textToText,
   speechToText,
 };
