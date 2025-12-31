@@ -1,5 +1,5 @@
 import "./ImagePart.css";
-import { Image } from "../../types";
+import type { Image } from "../../types";
 
 type Props = {
   part: Image;

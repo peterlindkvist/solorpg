@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { Section, Part, State, Story } from "../types";
+import type { Part, Section, State, Story } from "../types";
 
 import "./Game.css";
-import { ImagePart } from "./game/ImagePart";
-import { ButtonPart } from "./game/ButtonPart";
 import {
   buildStateQuery,
   mergeStates,
   parseNextSection,
   parseStateQueryValue,
 } from "../utils/gameUtils";
+import { ButtonPart } from "./game/ButtonPart";
 import { Header } from "./game/Header";
-import { ParagraphPart } from "./game/ParagraphPart";
+import { ImagePart } from "./game/ImagePart";
 import { Narrator } from "./game/Narrator";
+import { ParagraphPart } from "./game/ParagraphPart";
 import { useVoice } from "./game/Voice";
 
 type Props = {

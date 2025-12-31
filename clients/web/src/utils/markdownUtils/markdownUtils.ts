@@ -1,16 +1,16 @@
+import json5 from "json5";
 import markdownit from "markdown-it";
 import anchor from "markdown-it-anchor";
-import json5 from "json5";
-import {
+import type {
   Action,
-  Section,
-  Link,
   Condition,
   Image,
+  Link,
   Navigation,
-  Part,
-  Story,
   Paragraph,
+  Part,
+  Section,
+  Story,
 } from "../../types";
 
 // default mode

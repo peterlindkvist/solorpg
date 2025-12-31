@@ -1,8 +1,7 @@
-
 .game-button-container {
   display: flex;
   flex-direction: column;
-  width: 100% ;
+  width: 100%;
 }
 
 .game-button {

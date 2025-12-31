@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import "./GameContainer.css";
-import * as api from "./utils/api";
-import { Story } from "./types";
-import { parseMarkdown } from "./utils/markdownUtils/markdownUtils";
 import { Game } from "./components/Game";
+import type { Story } from "./types";
+import * as api from "./utils/api";
+import { parseMarkdown } from "./utils/markdownUtils/markdownUtils";
 
 function GameContainer() {
   const [bookName, setBookName] = useState<string>();

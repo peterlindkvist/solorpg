@@ -1,21 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import "./Markdown.css";
-import json5 from "json5";
 import MDEditor, {
   commands,
   getExtraCommands,
   selectWord,
 } from "@uiw/react-md-editor";
-import { onImagePasted } from "./markdown/editorUtils";
+import json5 from "json5";
+import mermaid from "mermaid";
+import type { Page, Story } from "../types";
 import * as api from "../utils/api";
-import { Page, Story } from "../types";
 import * as soloapi from "../utils/api";
 import {
   parseMarkdown,
   storyToMarkdown,
   storyToMermaid,
 } from "../utils/markdownUtils/markdownUtils";
-import mermaid from "mermaid";
+import { onImagePasted } from "./markdown/editorUtils";
 
 type Props = {
   storyId: string;
@@ -245,7 +245,7 @@ function actionCommand(): commands.ICommand {
       const selectedText = state1.selectedText;
 
       let actionText: string;
-      let startText: string = "```\n";
+      let startText = "```\n";
       try {
         const json = json5.parse(selectedText);
         actionText = JSON.stringify(json, null, 2);

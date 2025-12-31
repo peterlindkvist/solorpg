@@ -1,7 +1,7 @@
 import "dotenv/config";
-import * as imageController from "./server/services/assetsService";
-import * as markdownParser from "./clients/web/src/utils/markdown";
 import fs from "fs";
+import * as markdownParser from "./clients/web/src/utils/markdown";
+import * as imageController from "./server/services/assetsService";
 
 async function fetchImagesBauer() {
   const context = "'fantasy dark forest'";

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Part, Section, Story } from "../../types";
+import type { Part, Section, Story } from "../../types";
 import * as api from "../../utils/api";
 
 type Props = {
@@ -26,7 +26,6 @@ export function Narrator({
 
   const generateNarration = useCallback(async () => {
     if (!useNarrator || !story || !parts || !storyId) return;
-
 
     const paragraphs = parts.filter((p) => p.type === "paragraph");
 

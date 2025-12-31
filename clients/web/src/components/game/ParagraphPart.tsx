@@ -1,5 +1,5 @@
 import "./ParagraphPart.css";
-import { Paragraph } from "../../types";
+import type { Paragraph } from "../../types";
 
 type Props = {
   part: Paragraph;

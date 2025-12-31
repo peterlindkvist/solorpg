@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
+import type { Image } from "../../types";
 import { parseMarkdown, partsToMarkdown } from "./markdownUtils";
-import { Image } from "../../types";
 
 describe("markdownUtils Images", () => {
   describe("parseMarkdown", () => {

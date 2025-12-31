@@ -1,11 +1,19 @@
 import { describe, expect, test } from "@jest/globals";
-import { Action, Condition, Story, Navigation, Paragraph, Header, Link } from "../types";
+import type {
+  Action,
+  Condition,
+  Header,
+  Link,
+  Navigation,
+  Paragraph,
+  Story,
+} from "../types";
 import {
   evaluateAction,
   evaluateCondition,
   flatState,
-  replaceWithState,
   parseNextSection,
+  replaceWithState,
 } from "./gameUtils";
 
 describe("gameUtils", () => {
@@ -39,7 +47,9 @@ describe("gameUtils", () => {
         true: [],
         false: [],
       };
-      const { isTrue, renderPart } = evaluateCondition(condition, {damage: "d1"});
+      const { isTrue, renderPart } = evaluateCondition(condition, {
+        damage: "d1",
+      });
       expect(renderPart.text).toEqual("4+[{damage}] < 4 -> 4+1<4 -> false");
       expect(isTrue).toBe(false);
     });
@@ -194,14 +204,14 @@ describe("gameUtils", () => {
       expect(renderPart.text).toEqual("rolld6: [1]-> 1");
     });
 
-     test("evaluate with dices in variable", () => {
+    test("evaluate with dices in variable", () => {
       const action: Action = {
         type: "action",
         state: {
           rolld6: "[{damage}]+1",
         },
       };
-      const { state, renderPart } = evaluateAction(action, {damage: "d1"});
+      const { state, renderPart } = evaluateAction(action, { damage: "d1" });
 
       expect(state.rolld6).toBe(2);
       expect(renderPart.text).toEqual("rolld6: [1]-> 2");
@@ -306,8 +316,16 @@ describe("gameUtils", () => {
             id: "section1",
             parts: [
               { type: "paragraph", text: "Choose your path:" } as Paragraph,
-              { type: "navigation", text: "Go left", target: "left" } as Navigation,
-              { type: "navigation", text: "Go right", target: "right" } as Navigation,
+              {
+                type: "navigation",
+                text: "Go left",
+                target: "left",
+              } as Navigation,
+              {
+                type: "navigation",
+                text: "Go right",
+                target: "right",
+              } as Navigation,
             ],
           },
         ],
@@ -344,22 +362,38 @@ describe("gameUtils", () => {
             id: "section1",
             parts: [
               { type: "paragraph", text: "First paragraph." } as Paragraph,
-              { type: "navigation", text: "Continue", target: "section2" } as Navigation,
+              {
+                type: "navigation",
+                text: "Continue",
+                target: "section2",
+              } as Navigation,
             ],
           },
           {
             id: "section2",
             parts: [
               { type: "paragraph", text: "Second paragraph." } as Paragraph,
-              { type: "navigation", text: "Next", target: "section3" } as Navigation,
+              {
+                type: "navigation",
+                text: "Next",
+                target: "section3",
+              } as Navigation,
             ],
           },
           {
             id: "section3",
             parts: [
               { type: "paragraph", text: "Third paragraph." } as Paragraph,
-              { type: "navigation", text: "Choice A", target: "choiceA" } as Navigation,
-              { type: "navigation", text: "Choice B", target: "choiceB" } as Navigation,
+              {
+                type: "navigation",
+                text: "Choice A",
+                target: "choiceA",
+              } as Navigation,
+              {
+                type: "navigation",
+                text: "Choice B",
+                target: "choiceB",
+              } as Navigation,
             ],
           },
         ],
@@ -405,23 +439,41 @@ describe("gameUtils", () => {
             parts: [
               { type: "paragraph", text: "Starting section." } as Paragraph,
               { type: "action", state: { coins: 10 } } as Action,
-              { type: "navigation", text: "Continue", target: "section2" } as Navigation,
+              {
+                type: "navigation",
+                text: "Continue",
+                target: "section2",
+              } as Navigation,
             ],
           },
           {
             id: "section2",
             parts: [
-              { type: "paragraph", text: "Middle section. You have {coins} coins." } as Paragraph,
+              {
+                type: "paragraph",
+                text: "Middle section. You have {coins} coins.",
+              } as Paragraph,
               { type: "action", state: { coins: "+=5" } } as Action,
-              { type: "navigation", text: "Continue", target: "section3" } as Navigation,
+              {
+                type: "navigation",
+                text: "Continue",
+                target: "section3",
+              } as Navigation,
             ],
           },
           {
             id: "section3",
             parts: [
-              { type: "paragraph", text: "Final section. You now have {coins} coins." } as Paragraph,
+              {
+                type: "paragraph",
+                text: "Final section. You now have {coins} coins.",
+              } as Paragraph,
               { type: "navigation", text: "End", target: "end" } as Navigation,
-              { type: "navigation", text: "Restart", target: "section1" } as Navigation,
+              {
+                type: "navigation",
+                text: "Restart",
+                target: "section1",
+              } as Navigation,
             ],
           },
         ],
@@ -434,15 +486,18 @@ describe("gameUtils", () => {
 
       expect(result.newState).toEqual({ coins: 15 });
       expect(result.parts).toHaveLength(7);
-      
+
       // Check that state variables were properly replaced
       const middleParagraph = result.parts.find(
-        (p) => p.type === "paragraph" && (p as Paragraph).text?.includes("You have")
+        (p) =>
+          p.type === "paragraph" && (p as Paragraph).text?.includes("You have")
       ) as Paragraph;
       expect(middleParagraph.text).toBe("Middle section. You have 10 coins.");
-      
+
       const finalParagraph = result.parts.find(
-        (p) => p.type === "paragraph" && (p as Paragraph).text?.includes("You now have")
+        (p) =>
+          p.type === "paragraph" &&
+          (p as Paragraph).text?.includes("You now have")
       ) as Paragraph;
       expect(finalParagraph.text).toBe("Final section. You now have 15 coins.");
     });
@@ -456,14 +511,22 @@ describe("gameUtils", () => {
             id: "section1",
             parts: [
               { type: "paragraph", text: "Section 1" } as Paragraph,
-              { type: "navigation", text: "Continue", target: "section2" } as Navigation,
+              {
+                type: "navigation",
+                text: "Continue",
+                target: "section2",
+              } as Navigation,
             ],
           },
           {
             id: "section2",
             parts: [
               { type: "paragraph", text: "Section 2" } as Paragraph,
-              { type: "navigation", text: "Continue", target: "section1" } as Navigation,
+              {
+                type: "navigation",
+                text: "Continue",
+                target: "section1",
+              } as Navigation,
             ],
           },
         ],
@@ -477,9 +540,11 @@ describe("gameUtils", () => {
       // Should stop at maxDepth and include accumulated parts
       expect(result.parts.length).toBeGreaterThan(0);
       expect(result.parts.length).toBeLessThanOrEqual(6); // 3 iterations * 2 parts max
-      
+
       // Should include parts from multiple sections
-      const paragraphs = result.parts.filter(p => p.type === "paragraph") as Paragraph[];
+      const paragraphs = result.parts.filter(
+        (p) => p.type === "paragraph"
+      ) as Paragraph[];
       expect(paragraphs.length).toBeGreaterThan(1);
     });
 
@@ -508,7 +573,11 @@ describe("gameUtils", () => {
           {
             id: "empty",
             parts: [
-              { type: "navigation", text: "Skip", target: "content" } as Navigation,
+              {
+                type: "navigation",
+                text: "Skip",
+                target: "content",
+              } as Navigation,
             ],
           },
           {
@@ -541,7 +610,11 @@ describe("gameUtils", () => {
             id: "section1",
             parts: [
               { type: "header", text: "Höger 2" } as Header,
-              { type: "link", text: "tillbaka till gläntan", target: "section2" } as Link,
+              {
+                type: "link",
+                text: "tillbaka till gläntan",
+                target: "section2",
+              } as Link,
             ],
           },
           {

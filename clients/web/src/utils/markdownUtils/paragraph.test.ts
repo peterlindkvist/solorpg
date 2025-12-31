@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
+import type { Paragraph } from "../../types";
 import { parseMarkdown, partsToMarkdown } from "./markdownUtils";
-import { Paragraph } from "../../types";
 
 describe("markdownUtils Paragraph", () => {
   describe("parseMarkdown", () => {

@@ -2,14 +2,22 @@ const fs = require("fs");
 const OpenAI = require("openai");
 const crypto = require("crypto");
 const env = require("dotenv");
-const { language } = require("@elevenlabs/elevenlabs-js/api/resources/dubbing/resources/resource");
-const ElevenLabsClient = require('@elevenlabs/elevenlabs-js').ElevenLabsClient;
+const {
+  language,
+} = require("@elevenlabs/elevenlabs-js/api/resources/dubbing/resources/resource");
+const ElevenLabsClient = require("@elevenlabs/elevenlabs-js").ElevenLabsClient;
 
-env.config(); 
+env.config();
 
 const openai = new OpenAI();
-const elevenLabs = new ElevenLabsClient({ apiKey: process.env.ELEVENLABS_API_KEY });
+const elevenLabs = new ElevenLabsClient({
+  apiKey: process.env.ELEVENLABS_API_KEY,
+});
 
+const elevenLabsVoices = {
+  sanna: "aSLKtNoVBZlxQEMsnGL2",
+  adam: "x0u3EW21dbrORJzOq1m9",
+};
 
 async function generateImages(context, renderType, descriptions) {
   for (const description of descriptions) {
@@ -59,13 +67,9 @@ async function textToSpeechOpenAI(text, narrator) {
 
 async function textToSpeechElevenLabs(text, narrator) {
   const [_, voiceName, langCode] = narrator.split("-");
-  const voices = {
-    sanna: "aSLKtNoVBZlxQEMsnGL2",
-    adam: "x0u3EW21dbrORJzOq1m9"
-  }
-  const voice = voices[voiceName];
-  console.log("Generating speech with ElevenLabs:", voices, narrator, voice, langCode, text);
-  
+
+  const voice = elevenLabsVoices[voiceName];
+
   const mp3Stream = await elevenLabs.textToSpeech.convert(voice, {
     languageCode: langCode,
     outputFormat: "mp3_44100_128",
@@ -73,16 +77,16 @@ async function textToSpeechElevenLabs(text, narrator) {
     modelId: "eleven_multilingual_v2",
   });
 
- const fileName = `${hashString(`${voice}_${langCode}_${text}`)}.mp3`;
+  const fileName = `${hashString(`${voice}_${langCode}_${text}`)}.mp3`;
 
- console.log("Generated speech with ElevenLabs:", fileName);
+  console.log("Generated speech with ElevenLabs:", fileName);
 
- const chunks = [];
- for await (const chunk of mp3Stream) {
-   chunks.push(chunk);
- }
+  const chunks = [];
+  for await (const chunk of mp3Stream) {
+    chunks.push(chunk);
+  }
 
- return {
+  return {
     buffer: Buffer.concat(chunks),
     fileName,
   };

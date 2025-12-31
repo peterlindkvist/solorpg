@@ -1,13 +1,13 @@
 import { useCallback, useState } from "react";
 import "./App.css";
+import { Game } from "./components/Game";
 import { Markdown } from "./components/Markdown";
+import type { Page, Story } from "./types";
 import * as api from "./utils/api";
-import { Page, Story } from "./types";
 import {
   parseMarkdown,
   storyToMarkdown,
 } from "./utils/markdownUtils/markdownUtils";
-import { Game } from "./components/Game";
 
 function App() {
   const [bookName, setBookName] = useState<string>();

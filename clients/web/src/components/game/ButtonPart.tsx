@@ -1,5 +1,5 @@
 import "./ButtonPart.css";
-import { Link, Navigation } from "../../types";
+import type { Link, Navigation } from "../../types";
 
 type Props = {
   part: Link | Navigation;

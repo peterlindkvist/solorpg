@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { Section, Link, Story } from "../../types";
 import { useReactMediaRecorder } from "react-media-recorder";
+import type { Link, Section, Story } from "../../types";
 import * as api from "../../utils/api";
 
 type Props = {

@@ -1,4 +1,4 @@
-import { Image } from "../types";
+import type { Image } from "../types";
 
 const apiPath = window.location.host.startsWith("localhost")
   ? "http://localhost:8080/api"

@@ -93,15 +93,17 @@ async function solorpg(req, res) {
 
   if (req.path.startsWith("/api/speech") && req.method === "POST") {
     const { text, storyId, narrator = "nova" } = req.query;
-    
+
     // Create a consistent filename based on text content and narrator
     const crypto = require("crypto");
     const textHash = crypto
-    .createHash("md5")
-    .update(text + narrator)
-    .digest("hex");
+      .createHash("md5")
+      .update(text + narrator)
+      .digest("hex");
     const fileName = `${storyId}/speech_${textHash}.mp3`;
-    const speachEngine = narrator.startsWith("elevenlabs") ? "elevenlabs" : "openai";
+    const speachEngine = narrator.startsWith("elevenlabs")
+      ? "elevenlabs"
+      : "openai";
 
     // Check if the file already exists
     const existingFile = await checkFileExists(fileName);
@@ -112,9 +114,10 @@ async function solorpg(req, res) {
     }
 
     // Generate new speech file
-    const ret = speachEngine === "elevenlabs"
-      ? await textToSpeechElevenLabs(text, narrator)
-      : await textToSpeechOpenAI(text, narrator);
+    const ret =
+      speachEngine === "elevenlabs"
+        ? await textToSpeechElevenLabs(text, narrator)
+        : await textToSpeechOpenAI(text, narrator);
     const file = await uploadFileToStorage(ret.buffer, fileName);
 
     res.send({ url: file.url });

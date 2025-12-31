@@ -13,13 +13,13 @@ function uploadImageToStorage(fileName, storyName, buffer) {
     {
       destination: `${storyName}/${fileName}`,
     },
-    function (err, file) {
+    (err, file) => {
       if (err) {
         console.error(`Error uploading ${fileName}: ${err}`);
       } else {
         console.log(`${fileName} uploaded to ${bucketName}.`);
 
-        file.makePublic(async function (err) {
+        file.makePublic(async (err) => {
           if (err) {
             console.error(`Error making file public: ${err}`);
           } else {

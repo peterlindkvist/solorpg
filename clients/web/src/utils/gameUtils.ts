@@ -1,17 +1,17 @@
-import { flatten, unflatten } from "safe-flat";
-import { Parser } from "expr-eval";
-import {
-  Action,
-  Section,
-  Condition,
-  Part,
-  State,
-  Settings,
-  Story,
-  Navigation,
-  Link,
-} from "../types";
 import { DiceRoll } from "@dice-roller/rpg-dice-roller";
+import { Parser } from "expr-eval";
+import { flatten, unflatten } from "safe-flat";
+import type {
+  Action,
+  Condition,
+  Link,
+  Navigation,
+  Part,
+  Section,
+  Settings,
+  State,
+  Story,
+} from "../types";
 
 type FlattenState = Record<string, string | number>;
 
@@ -20,7 +20,7 @@ export function parseNextSection(
   sectionId: string,
   state: State,
   settings: Settings = {},
-  maxDepth: number = 10
+  maxDepth = 10
 ): {
   section?: Section;
   parts: Part[];
