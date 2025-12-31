@@ -27,7 +27,7 @@ export function Game(props: Props) {
   const [renderParts, setRenderParts] = useState<Array<Part>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [useUserVoice, setUseUserVoice] = useState(false);
-  const [useNarrator, setUseNarrator] = useState(true);
+  const [useNarrator, setUseNarrator] = useState(false);
   const [state, setState] = useState<State>();
 
   // to be able to log the state in the console

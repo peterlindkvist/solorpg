@@ -92,7 +92,7 @@ function parseNextSectionRecursive(
     return {
       section,
       parts: mergedParts,
-      newState,
+      newState: followed.newState,
       narratorText: getNarratorText(mergedParts),
     };
   }
@@ -175,9 +175,8 @@ export function getNarratorText(parts: Part[]): string {
         //   return part.text;
         // } else if (part.type === "condition") {
         //   return part.text;
-      } else {
-        return "";
       }
+      return "";
     })
     .join(" ");
 }
@@ -280,23 +279,21 @@ function evaluateActionValue(
 function toNumberForNumbers(value: string): string | number {
   if (value === Number.parseFloat(value).toString()) {
     return Number.parseFloat(value);
-  } else {
-    return value;
   }
+  return value;
 }
 
 function replacePrefix(key: string, value: string | number): string {
   if (typeof value === "number") {
     return value.toString();
-  } else {
-    if (value.startsWith("+=")) {
-      return `{${key}} + ${value.slice(2)}`;
-    }
-    if (value.startsWith("-=")) {
-      return `{${key}} - (${value.slice(2)})`;
-    }
-    return value;
   }
+  if (value.startsWith("+=")) {
+    return `{${key}} + ${value.slice(2)}`;
+  }
+  if (value.startsWith("-=")) {
+    return `{${key}} - (${value.slice(2)})`;
+  }
+  return value;
 }
 
 export function replaceWithState(text: string, state: FlattenState): string {
@@ -310,34 +307,41 @@ export function replaceWithState(text: string, state: FlattenState): string {
 }
 
 function rollDices(value: string): { value: string; rolls?: string } {
-  const diceMatches = Array.from(value.matchAll(/\[(.*)\]/g));
+  const diceMatches = Array.from(value.matchAll(/\[([^\]]*)\]/g));
+
   if (diceMatches.length === 0) {
     return { value };
   }
-  const ret = { value, rolls: "" };
-  for (const match of diceMatches) {
+  let result = value;
+  let allRolls = "";
+
+  // Process matches in reverse order to preserve indices
+  for (let i = diceMatches.length - 1; i >= 0; i--) {
+    const match = diceMatches[i];
     try {
       const roll = new DiceRoll(match[1]);
-      const endStart = (match.index ?? 0) + match[1].length + 2;
+      const startIndex = match.index ?? 0;
+      const endIndex = startIndex + match[0].length;
 
-      return {
-        value:
-          ret.value.substring(0, match.index) +
-          roll.total.toString() +
-          ret.value.substring(endStart),
-        rolls: ret.rolls + roll.rolls.toString(),
-      };
+      result =
+        result.substring(0, startIndex) +
+        roll.total.toString() +
+        result.substring(endIndex);
+      allRolls = roll.rolls.toString() + allRolls;
     } catch (_error) {
       const error =
         _error instanceof Error ? _error : new Error("unknown error");
-
       return {
         value,
         rolls: error.message,
       };
     }
   }
-  return ret;
+
+  return {
+    value: result,
+    rolls: allRolls,
+  };
 }
 
 export function updateState(action: Action, state: State): State {
@@ -348,9 +352,8 @@ export function updateState(action: Action, state: State): State {
       if (typeof value === "number" || typeof value === "string") {
         const newValue = evaluateValue(value);
         return [key, newValue];
-      } else {
-        return [key, value];
       }
+      return [key, value];
     })
   );
   return unFlatState({ ...flattenState, ...newValues });
@@ -403,12 +406,10 @@ function omit<T extends Record<string, unknown>, K extends keyof T>(
 ): Omit<T, K> {
   return Object.entries(obj).reduce(
     (acc: Omit<T, K>, [key, value]: [string, unknown]) => {
-      return props.includes(key as keyof T)
-        ? acc
-        : {
-            ...acc,
-            [key]: value,
-          };
+      if (!props.includes(key as keyof T)) {
+        acc[key as keyof Omit<T, K>] = value as Omit<T, K>[keyof Omit<T, K>];
+      }
+      return acc;
     },
     {} as Omit<T, K>
   );

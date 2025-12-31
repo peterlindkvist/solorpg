@@ -43,15 +43,18 @@ describe("gameUtils", () => {
     test("with dice in variable", () => {
       const condition: Condition = {
         type: "condition",
-        condition: "4+[{damage}] < 4",
+        condition: "3+[{damage}]-[{defence}] < 4",
         true: [],
         false: [],
       };
       const { isTrue, renderPart } = evaluateCondition(condition, {
         damage: "d1",
+        defence: "d1",
       });
-      expect(renderPart.text).toEqual("4+[{damage}] < 4 -> 4+1<4 -> false");
-      expect(isTrue).toBe(false);
+      expect(renderPart.text).toEqual(
+        "3+[{damage}]-[{defence}] < 4 -> 3+1-1<4 -> true"
+      );
+      expect(isTrue).toBe(true);
     });
     test("with variable", () => {
       const condition: Condition = {
@@ -500,6 +503,108 @@ describe("gameUtils", () => {
           (p as Paragraph).text?.includes("You now have")
       ) as Paragraph;
       expect(finalParagraph.text).toBe("Final section. You now have 15 coins.");
+    });
+
+    test("should handle state changes during loop in action, like in battle", () => {
+      const story: Story = {
+        title: "Test Story",
+        markdown: "",
+        sections: [
+          {
+            id: "defineBattle",
+            parts: [
+              { type: "paragraph", text: "Starting section." } as Paragraph,
+              {
+                type: "action",
+                state: { hero_health: 10, goblin_health: 11, turns: 0 },
+              } as Action,
+              {
+                type: "navigation",
+                text: "Continue",
+                target: "fight",
+              } as Navigation,
+            ],
+          },
+          {
+            id: "fight",
+            parts: [
+              {
+                type: "action",
+                state: {
+                  hero_health: "-=1",
+                  goblin_health: "-=2",
+                  turns: "+=1",
+                },
+              } as Action,
+              {
+                type: "condition",
+                condition: "{hero_health} <= 0",
+                true: [
+                  {
+                    type: "navigation",
+                    text: "Loss",
+                    target: "loss",
+                  } as Navigation,
+                ],
+                false: [],
+              },
+              {
+                type: "condition",
+                condition: "{goblin_health} <= 0 && {hero_health} > 0",
+                true: [
+                  {
+                    type: "navigation",
+                    text: "Win",
+                    target: "win",
+                  } as Navigation,
+                ],
+                false: [
+                  {
+                    type: "navigation",
+                    text: "Continue",
+                    target: "fight",
+                  } as Navigation,
+                ],
+              },
+            ],
+          },
+          {
+            id: "win",
+            parts: [
+              {
+                type: "paragraph",
+                text: "Win Hero have {hero_health} and Goblin have {goblin_health}.",
+              },
+            ],
+          },
+          {
+            id: "loss",
+            parts: [
+              {
+                type: "paragraph",
+                text: "Loss Hero have {hero_health} and Goblin have {goblin_health}.",
+              },
+            ],
+          },
+        ],
+        images: [],
+        state: {},
+        settings: { type: "action", state: {} },
+      };
+
+      const result = parseNextSection(story, "defineBattle", {});
+
+      expect(result.newState).toEqual({
+        hero_health: 4,
+        goblin_health: -1,
+        turns: 6,
+      });
+      console.table(result.parts);
+      expect(result.parts).toHaveLength(21);
+
+      const finalParagraph = result.parts.at(-1) as Paragraph;
+      expect(finalParagraph.type).toBe("paragraph");
+      expect(finalParagraph.text).toBe("Win Hero have 4 and Goblin have -1.");
     });
 
     test("should respect maxDepth parameter to prevent infinite loops", () => {
