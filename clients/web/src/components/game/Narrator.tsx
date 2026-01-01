@@ -34,7 +34,7 @@ export function Narrator({
     for (const p of paragraphs) {
       const query = {
         storyId,
-        text: p.text,
+        text: p.text ?? "",
         narrator: "elevenlabs-adam-sv",
         // narrator: "elevenlabs-sanna-sv",
         // narrator: "openai-nova",
@@ -50,7 +50,7 @@ export function Narrator({
 
     setNarratorUrls(urls);
     setCurrentAudioIndex(0);
-  }, [useNarrator, story, section]);
+  }, [useNarrator, story, parts, storyId]);
 
   useEffect(() => {
     if (section) {

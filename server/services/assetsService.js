@@ -1,13 +1,11 @@
 const fs = require("fs");
 const OpenAI = require("openai");
 const crypto = require("crypto");
-const env = require("dotenv");
-const {
-  language,
-} = require("@elevenlabs/elevenlabs-js/api/resources/dubbing/resources/resource");
+// const env = require("dotenv");
+
 const ElevenLabsClient = require("@elevenlabs/elevenlabs-js").ElevenLabsClient;
 
-env.config();
+// env.config();
 
 const openai = new OpenAI();
 const elevenLabs = new ElevenLabsClient({
